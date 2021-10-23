@@ -188,6 +188,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	private int sizeX;
 	private int sizeY;
 	final private int playerMoves = 5;
+	final private int safeOffset = 2;
 	final private Comparator<Integer> costComparator = new Comparator<Integer>() {
 		@Override
 		public int compare(Integer o1, Integer o2) {
@@ -217,7 +218,6 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	private SoundPlayer soundPlayer;
 
 	public Panel(int size, int width, int height, boolean stepMode, boolean soundEnabled) {
-
 		// Step Mode
 		this.stepMode = stepMode;
 
@@ -242,47 +242,8 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		int off = (tileSize - w) / 2; // Meio do tile
 		player = new Player(playerMoves, 5, 5, tileSize, off, h, w, Color.BLUE);
 
-		// Inicializar inimigos comuns
-		h = (int) (tileSize * 0.6); // 60% do tileSize
-		w = (int) (tileSize * 0.6); // 60% do tileSize
-		off = (tileSize - w) / 2; // Meio do tile
-		enemies.add(new Enemy(enemyMoves, 10, 10, tileSize, off, h, w, Color.RED));
-		enemies.add(new Enemy(enemyMoves, 15, 15, tileSize, off, h, w, Color.RED));
-		enemies.add(new Enemy(enemyMoves, 10, 15, tileSize, off, h, w, Color.RED));
-
-		// Inicializar inimigos ambiciosos
-		h = (int) (tileSize * 0.95); // 95% do tileSize
-		w = (int) (tileSize * 0.95); // 95% do tileSize
-		off = (tileSize - w) / 2; // Meio do tile
-		greedyEnemies.add(new GreedyEnemy(enemyMoves, 9, 9, tileSize, off, h, w, Color.RED));
-		greedyEnemies.add(new GreedyEnemy(enemyMoves, 14, 14, tileSize, off, h, w, Color.RED));
-		greedyEnemies.add(new GreedyEnemy(enemyMoves, 9, 14, tileSize, off, h, w, Color.RED));
-
-		// Inicializar inimigos da mediana
-		h = (int) (tileSize * 0.9); // 90% do tileSize
-		w = (int) (tileSize * 0.9); // 90% do tileSize
-		off = (tileSize - w) / 2; // Meio do tile
-		medianEnemies.add(new MedianEnemy(enemyMoves, 8, 8, tileSize, off, h, w, Color.RED));
-		medianEnemies.add(new MedianEnemy(enemyMoves, 13, 13, tileSize, off, h, w, Color.RED));
-		medianEnemies.add(new MedianEnemy(enemyMoves, 8, 13, tileSize, off, h, w, Color.RED));
-		
-		// Inicializar inimigos do agendamento com peso
-		h = (int) (tileSize * 0.9); // 90% do tileSize
-		w = (int) (tileSize * 0.9); // 90% do tileSize
-		off = (tileSize - w) / 2; // Meio do tile
-		wisEnemies.add(new WISEnemy(enemyMoves, 7, 7, tileSize, off, h, w, Color.RED));
-		wisEnemies.add(new WISEnemy(enemyMoves, 12, 12, tileSize, off, h, w, Color.RED));
-		wisEnemies.add(new WISEnemy(enemyMoves, 7, 12, tileSize, off, h, w, Color.RED));
-
-		// Lista de inimigos
-		allEnemies.addAll(enemies);
-		allEnemies.addAll(greedyEnemies);
-		allEnemies.addAll(medianEnemies);
-		allEnemies.addAll(wisEnemies);
-		
-		// Inicializar exércitos
-		wisEnemyArmy.setEnemies(wisEnemies);
-		wisEnemyArmy.setAllEnemies(allEnemies);
+		// Inicializar inimigos
+		initializeEnemies();
 
 		// Inicializa Grafo do Mapa
 		grid = new GraphMatrix<Integer, Integer>(sizeX, sizeY, EMPTY, VISITED, FORBIDDEN, initialCost, minimumCost,
@@ -317,6 +278,90 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		// Inicia o Jogo
 		start();
 	}
+	
+	// Inicializa inimigos
+	private void initializeEnemies() {
+		int minX = player.getGridX() + safeOffset;
+		int minY = player.getGridY() + safeOffset;
+		int maxX = sizeX;
+		int maxY = sizeY;
+		
+		// Inicializar inimigos comuns
+		int h = (int) (tileSize * 0.6); // 60% do tileSize
+		int w = (int) (tileSize * 0.6); // 60% do tileSize
+		int off = (tileSize - w) / 2; // Meio do tile
+		for(int i=0;i<3;i++) {
+			Position p = generateRandomPos(minX, minY, maxX, maxY);
+			int x = p.getPosX();
+			int y = p.getPosY();
+			Enemy e = new Enemy(enemyMoves, x, y, tileSize, off, h, w, Color.RED);
+			enemies.add(e);
+			allEnemies.add(e);
+		}
+		// Inicializar inimigos ambiciosos
+		h = (int) (tileSize * 0.95); // 95% do tileSize
+		w = (int) (tileSize * 0.95); // 95% do tileSize
+		off = (tileSize - w) / 2; // Meio do tile
+		for(int i=0;i<3;i++) {
+			Position p = generateRandomPos(minX, minY, maxX, maxY);
+			int x = p.getPosX();
+			int y = p.getPosY();
+			GreedyEnemy e = new GreedyEnemy(enemyMoves, x, y, tileSize, off, h, w, Color.RED);
+			greedyEnemies.add(e);
+			allEnemies.add(e);
+		}
+		// Inicializar inimigos da mediana
+		h = (int) (tileSize * 0.9); // 90% do tileSize
+		w = (int) (tileSize * 0.9); // 90% do tileSize
+		off = (tileSize - w) / 2; // Meio do tile
+		for(int i=0;i<3;i++) {
+			Position p = generateRandomPos(minX, minY, maxX, maxY);
+			int x = p.getPosX();
+			int y = p.getPosY();
+			MedianEnemy e = new MedianEnemy(enemyMoves, x, y, tileSize, off, h, w, Color.RED);
+			medianEnemies.add(e);
+			allEnemies.add(e);
+		}
+		// Inicializar inimigos do agendamento com peso
+		for(int i=0;i<3;i++) {
+			Position p = generateRandomPos(minX, minY, maxX, maxY);
+			int x = p.getPosX();
+			int y = p.getPosY();
+			WISEnemy e = new WISEnemy(enemyMoves, x, y, tileSize, off, h, w, Color.RED);
+			wisEnemies.add(e);
+			allEnemies.add(e);
+		}
+		wisEnemyArmy.setEnemies(wisEnemies);
+		wisEnemyArmy.setAllEnemies(allEnemies);
+	}
+	
+	// Gera uma posição válida
+	private Position generateRandomPos(int minX, int minY, int maxX, int maxY) {
+		int randomX = 0;
+		int randomY = 0;
+		boolean acceptable = false;
+		
+		while(!acceptable) {
+			randomX = ThreadLocalRandom.current().nextInt(minX, sizeX);
+			randomY = ThreadLocalRandom.current().nextInt(minY, sizeY);
+			acceptable = !verifyCollision(randomX, randomY);
+		}
+		return new Position(randomX, randomY);
+	}
+	
+	// Verifica a colisão com todas as entidades
+	private boolean verifyCollision(int x, int y) {
+		List<Entity> entities = new ArrayList<Entity>();
+		entities.addAll(allEnemies);
+		entities.add(player);
+		
+		for (Entity entity : entities) {
+			if (checkOverride(x, y, entity.getGridX(), entity.getGridY())) {
+				return true;
+			}
+		}
+		return false;
+	}
 
 	// Altera o custo de até <number> casas aleatórias
 	private void addRandomCosts(int number, int max) {
@@ -330,25 +375,12 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 
 	// Adiciona até <number> obstáculos intransponíveis
 	private void addRandomForbidden(int number) {
-		List<Entity> entities = new ArrayList<Entity>();
-		entities.addAll(allEnemies);
-		entities.add(player);
-
 		for (int i = 0; i < number; i++) {
-			Boolean acceptable = true;
-			int randomX = ThreadLocalRandom.current().nextInt(0, sizeX);
-			int randomY = ThreadLocalRandom.current().nextInt(0, sizeY);
-
-			// Verifica sobreposição com as entidades
-			for (Entity entity : entities) {
-				if (checkOverride(randomX, randomY, entity.getGridX(), entity.getGridY())) {
-					acceptable = false;
-				}
-			}
-			// Apenas acrescenta o obstáculo caso a casa esteja livre
-			if (acceptable) {
-				grid.setElementValue(randomX, randomY, FORBIDDEN);
-			}
+			Position p = generateRandomPos(0, 0, sizeX, sizeY);
+			int x = p.getPosX();
+			int y = p.getPosY();
+			
+			grid.setElementValue(x, y, FORBIDDEN);
 		}
 	}
 
