@@ -162,7 +162,8 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	private static final Integer VISITED = 1;
 	private static int WIDTH;
 	private static int HEIGHT;
-	private Player player;
+	private List<Player> playerArmy = new ArrayList<Player>();
+	private int actualPlayer = 0;
 	private Map map;
 	private List<Position> preview;
 	private GraphMatrix<Integer, Integer> grid;
@@ -243,7 +244,8 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		int h = (int) (tileSize * 0.8); // 80% do tileSize
 		int w = (int) (tileSize * 0.8); // 80% do tileSize
 		int off = (tileSize - w) / 2; // Meio do tile
-		player = new Player(playerMoves, 5, 5, tileSize, off, h, w, Color.BLUE);
+		playerArmy.add(new Player(playerMoves, 5, 5, tileSize, off, h, w, Color.BLUE));
+		playerArmy.add(new Player(playerMoves, 5, 10, tileSize, off, h, w, Color.BLUE));
 
 		// Inicializar inimigos
 		initializeEnemies();
@@ -275,8 +277,11 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		map = new Map(grid, hash, WIDTH, HEIGHT, sizeX, sizeY);
 		addRandomCosts((sizeX * sizeY) / 2, hash.size() + 1);
 		addRandomForbidden(sizeX);
-		grid.setElementCost(player.getGridX(), player.getGridY(), initialCost);
-		grid.setElementValue(player.getGridX(), player.getGridY(), EMPTY);
+		for (Player player : playerArmy) {
+			grid.setElementCost(player.getGridX(), player.getGridY(), initialCost);
+			grid.setElementValue(player.getGridX(), player.getGridY(), EMPTY);
+		}
+		
 
 		// Inicia o Jogo
 		start();
@@ -284,8 +289,8 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	
 	// Inicializa inimigos
 	private void initializeEnemies() {
-		int minX = player.getGridX() + safeOffset;
-		int minY = player.getGridY() + safeOffset;
+		int minX = playerArmy.get(0).getGridX() + safeOffset;
+		int minY = playerArmy.get(0).getGridY() + safeOffset;
 		int maxX = sizeX;
 		int maxY = sizeY;
 		
@@ -356,7 +361,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	private boolean verifyCollision(int x, int y) {
 		List<Entity> entities = new ArrayList<Entity>();
 		entities.addAll(allEnemies);
-		entities.add(player);
+		entities.addAll(playerArmy);
 		
 		for (Entity entity : entities) {
 			if (checkOverride(x, y, entity.getGridX(), entity.getGridY())) {
@@ -403,7 +408,9 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 			drawPreview(g2d);
 		}
 		// Desenha o Jogador
-		player.draw(g2d);
+		for (Player player : playerArmy) {
+			player.draw(g2d);
+		}
 
 		// Desenha inimigos
 		for (Entity enemy : allEnemies) {
@@ -431,7 +438,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 			if (lastMouseX != mx || lastMouseY != my) {
 				lastMouseX = mx;
 				lastMouseY = my;
-				if (mx == player.getGridX() && my == player.getGridY())
+				if (mx == playerArmy.get(actualPlayer).getGridX() && my == playerArmy.get(actualPlayer).getGridY())
 					inPlayer = true;
 				else {
 					inPlayer = false;
@@ -452,47 +459,53 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	public void mouseClicked(MouseEvent m) {
 		stopOnTKO();
 		
-		// Move o Jogador
-		if (moveCost <= player.getMoves() && !inPlayer && !isForbidden(m) && 
+		// Move o Jogador Atual
+		if (moveCost <= playerArmy.get(actualPlayer).getMoves() && !inPlayer && !isForbidden(m) && 
 				checkValidPos(m.getX(), m.getY())) {
 			if (stepMode) {
 				// Movimentação passo a passo
+				previewVisibility = false;
 				movePlayer();
 			} else {
 				// Movimentação direta
-				player.setGridX((coordToGrid(m.getX())));
-				player.setGridY((coordToGrid(m.getY())));
+				playerArmy.get(actualPlayer).setGridX((coordToGrid(m.getX())));
+				playerArmy.get(actualPlayer).setGridY((coordToGrid(m.getY())));
 				soundPlayer.play("playerMove");
 			}
 			inPlayer = true;
-
-			encontraCaminhoInimigos();
-
-			rounds++;
-			if (rounds % 10 == 0 && enemyMoves <= 2 * playerMoves)
-				enemyMoves++;
-			for (Enemy enemy : enemies) {
-				enemy.setMoves(enemyMoves);
-			}
-
-			for (Entity enemy : allEnemies) {
-				if (enemy.getGridX().equals(player.getGridX()) && enemy.getGridY().equals(player.getGridY())) {
-					soundPlayer.play("death");
-					stop();
+			actualPlayer++;
+			if (actualPlayer == playerArmy.size()) {
+				actualPlayer = 0;
+				encontraCaminhoInimigos();
+				rounds++;
+				if (rounds % 10 == 0 && enemyMoves <= 2 * playerMoves)
+					enemyMoves++;
+				for (Enemy enemy : enemies) {
+					enemy.setMoves(enemyMoves);
 				}
+				for(Player player : playerArmy)
+					for (Entity enemy : allEnemies) {
+						if (enemy.getGridX().equals(player.getGridX()) &&
+								enemy.getGridY().equals(player.getGridY())) {
+							soundPlayer.play("death");
+							stop();
+						}
+					}
 			}
+			else
+				previewVisibility = true;
 			repaint();
 		}
 	}
 
 	private void movePlayer() {
 		int counter = 0;
-		previewVisibility = false;
+		
 		for (Position pos : preview) {
 			if (counter > playerMoves)
 				break;
-			player.setGridX(pos.getPosX());
-			player.setGridY(pos.getPosY());
+			playerArmy.get(actualPlayer).setGridX(pos.getPosX());
+			playerArmy.get(actualPlayer).setGridY(pos.getPosY());
 			soundPlayer.play("playerMove");
 			delayPaint(msDelay);
 			counter++;
@@ -509,8 +522,8 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	public void mouseExited(MouseEvent m) {
 		stopOnTKO();
 		inPlayer = true;
-		lastMouseX = player.getGridX();
-		lastMouseY = player.getGridY();
+		lastMouseX = playerArmy.get(actualPlayer).getGridX();
+		lastMouseY = playerArmy.get(actualPlayer).getGridY();
 		repaint();
 	}
 
@@ -534,10 +547,10 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		g.setColor(Color.RED);
 		if (!preview.isEmpty() && !inPlayer) {
 			for (Position e : preview) {
-				if (moveCost > player.getMoves())
+				if (moveCost > playerArmy.get(actualPlayer).getMoves())
 					break;
 				if (x != -1 && y != -1) {
-					if (grid.getElementCost(e) + moveCost <= player.getMoves())
+					if (grid.getElementCost(e) + moveCost <= playerArmy.get(actualPlayer).getMoves())
 						g.drawLine(gridToCoord(e.getPosX()) + tileSize / 2, gridToCoord(e.getPosY()) + tileSize / 2,
 								gridToCoord(x) + tileSize / 2, gridToCoord(y) + tileSize / 2);
 					moveCost += grid.getElementCost(e);
@@ -570,7 +583,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 			grid.setElementValue(e.getGridX(), e.getGridY(), FORBIDDEN);
 		}
 
-		List<Position> ps = grid.visitableNeighbours(player.getGridX(), player.getGridY());
+		List<Position> ps = grid.visitableNeighbours(playerArmy.get(actualPlayer).getGridX(), playerArmy.get(actualPlayer).getGridY());
 
 		if (ps.isEmpty()) {
 			stop();
@@ -590,8 +603,8 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 			grid.setElementValue(e.getGridX(), e.getGridY(), FORBIDDEN);
 		}
 
-		CheapestPath<Position, Integer> cpt = grid.dijkstra(new Position(player.getGridX(), player.getGridY()),
-				new Position(lastMouseX, lastMouseY));
+		CheapestPath<Position, Integer> cpt = grid.dijkstra(new Position(playerArmy.get(actualPlayer).getGridX(), 
+				playerArmy.get(actualPlayer).getGridY()), new Position(lastMouseX, lastMouseY));
 		preview = cheapestPathToList(cpt);
 
 		// Reverter modificação
@@ -635,7 +648,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 			lockOtherEnemies(enemy);
 
 			// Caminho do inimigo
-			EnemyCheapestPath enemyPath = new EnemyCheapestPath(enemy, player);
+			EnemyCheapestPath enemyPath = new EnemyCheapestPath(enemy, playerArmy.get(0));
 			if (enemyPath.getValid()) {
 				moveEnemyToPlayerWithCost(enemyPath.getEnemy(), enemyPath.getPath());
 			}
@@ -687,7 +700,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 			// Impedir inimigos de entrarem uns nos outros
 			lockOtherEnemies(enemy);
 
-			GreedyCheapestPath item = new GreedyCheapestPath(enemy, player);
+			GreedyCheapestPath item = new GreedyCheapestPath(enemy, playerArmy.get(actualPlayer));
 
 			if (item.getValid()) {
 				items.add(item);
@@ -763,7 +776,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 			// Impedir inimigos de entrarem uns nos outros
 			lockOtherEnemies(enemy);
 
-			EnemyCheapestPath enemyPath = new EnemyCheapestPath(enemy, player);
+			EnemyCheapestPath enemyPath = new EnemyCheapestPath(enemy, playerArmy.get(actualPlayer));
 
 			if (enemyPath.getValid()) {
 				items.add(enemyPath);
@@ -789,7 +802,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		grid.setVisitedToEmpty();
 		
 		wisEnemyArmy.setGrid(grid);
-		wisEnemyArmy.setTarget(player);
+		wisEnemyArmy.setTarget(playerArmy.get(actualPlayer));
 		wisEnemyArmy.findPath();
 		
 		for (WISCheapestPath path : wisEnemyArmy.getOrderedPaths()) {
@@ -829,7 +842,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		Integer actualCost = 0;
 		Position endPosition = new Position(enemy.getGridX(), enemy.getGridY());
 		Integer initialTileCost = grid.getElementCost(endPosition);
-		Position playerPosition = new Position(player.getGridX(), player.getGridY());
+		Position playerPosition = new Position(playerArmy.get(actualPlayer).getGridX(), playerArmy.get(actualPlayer).getGridY());
 		for (Position p : path.getPath()) {
 			actualCost += grid.getElementCost(p);
 
