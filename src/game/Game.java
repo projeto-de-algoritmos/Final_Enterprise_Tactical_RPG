@@ -1,5 +1,6 @@
 package game;
 
+import java.awt.BorderLayout;
 import java.util.concurrent.TimeUnit;
 
 import javax.swing.JFrame;
@@ -9,7 +10,7 @@ public class Game {
 	private boolean running;
 
 	private JFrame frame;
-	private Panel panel;
+	private Panel gamePanel;
 	private int score;
 
 	public Game(int size, boolean stepMode, boolean sounds) {
@@ -24,11 +25,11 @@ public class Game {
 		frame.pack();
 		
 		
-		frame.setSize(500 - mod, 530 - mod);
+		frame.setSize(500 - mod, 530 - mod + 530/size);
 		frame.setLocationRelativeTo(null);
 		
-		panel = new Panel(size, 500-mod, 500-mod, stepMode, sounds);
-		frame.add(panel);
+		gamePanel = new Panel(size, 500-mod, 500-mod, stepMode, sounds);
+		frame.add(gamePanel, BorderLayout.CENTER);
 		
 		frame.setVisible(true);
 		frame.setResizable(false);
@@ -50,9 +51,9 @@ public class Game {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		if (!panel.getRunning()) {
+		if (!gamePanel.getRunning()) {
 			setRunning(false);
-			score = panel.getScore();
+			score = gamePanel.getScore();
 		}
 	}
 

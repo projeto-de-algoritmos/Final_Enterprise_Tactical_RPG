@@ -216,11 +216,14 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	private int msLongerDelay = 2 * msDelay;
 	
 	private SoundPlayer soundPlayer;
+	private String message;
 
 	public Panel(int size, int width, int height, boolean stepMode, boolean soundEnabled) {
 		// Step Mode
 		this.stepMode = stepMode;
 
+		message = "Your Turn";
+		
 		// Define os tamanhos
 		WIDTH = width;
 		HEIGHT = height;
@@ -230,7 +233,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 
 		// Configurações do Painel
 		setFocusable(true);
-		setPreferredSize(new Dimension(WIDTH, HEIGHT));
+		setPreferredSize(new Dimension(WIDTH, HEIGHT+tileSize));
 
 		// Mouse Listeners
 		addMouseListener(this);
@@ -406,6 +409,10 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		for (Entity enemy : allEnemies) {
 			enemy.draw(g2d);
 		}
+		
+		// Desenha mensagens
+		g2d.setColor(Color.BLACK);
+		g2d.drawString(message, gridToCoord(1), gridToCoord(sizeY)+tileSize/2+5);
 	}
 
 	public void stop() {
@@ -415,42 +422,46 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	@Override
 	public void mouseMoved(MouseEvent m) {
 		stopOnTKO();
-
-		// Coordenadas atuais do mouse na grade
-		int mx = coordToGrid(m.getX());
-		int my = coordToGrid(m.getY());
-
-		// Atualiza as coordenadas do Mouse
-		if (lastMouseX != mx || lastMouseY != my) {
-			lastMouseX = mx;
-			lastMouseY = my;
-			if (mx == player.getGridX() && my == player.getGridY())
-				inPlayer = true;
-			else {
-				inPlayer = false;
-				try {
-					encontraCaminho();
-				} catch (ArrayIndexOutOfBoundsException e) {
-
+		if(checkValidPos(m.getX(), m.getY())) {
+			// Coordenadas atuais do mouse na grade
+			int mx = coordToGrid(m.getX());
+			int my = coordToGrid(m.getY());
+	
+			// Atualiza as coordenadas do Mouse
+			if (lastMouseX != mx || lastMouseY != my) {
+				lastMouseX = mx;
+				lastMouseY = my;
+				if (mx == player.getGridX() && my == player.getGridY())
+					inPlayer = true;
+				else {
+					inPlayer = false;
+					try {
+						encontraCaminho();
+					} catch (ArrayIndexOutOfBoundsException e) {
+	
+					}
 				}
+				repaint();
 			}
-			repaint();
 		}
+		else
+			mouseExited(m);
 	}
 
 	@Override
 	public void mouseClicked(MouseEvent m) {
 		stopOnTKO();
-
+		
 		// Move o Jogador
-		if (moveCost <= player.getMoves() && !inPlayer && !isForbidden(m)) {
+		if (moveCost <= player.getMoves() && !inPlayer && !isForbidden(m) && 
+				checkValidPos(m.getX(), m.getY())) {
 			if (stepMode) {
 				// Movimentação passo a passo
 				movePlayer();
 			} else {
 				// Movimentação direta
-				player.setGridX((m.getX() - 1) / tileSize);
-				player.setGridY((m.getY() - 1) / tileSize);
+				player.setGridX((coordToGrid(m.getX())));
+				player.setGridY((coordToGrid(m.getY())));
 				soundPlayer.play("playerMove");
 			}
 			inPlayer = true;
@@ -593,6 +604,8 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 
 	private void encontraCaminhoInimigos() {
 		grid.setVisitedToEmpty();
+		
+		updateMessage("Enemy Turn");
 
 		// Caminho dos inimigos comuns
 		encontraCaminhoInimigosComuns();
@@ -610,6 +623,8 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		previewVisibility = true;
 
 		grid.setVisitedToEmpty();
+		
+		updateMessage("Your Turn");
 	}
 
 	private void encontraCaminhoInimigosComuns() {
@@ -644,6 +659,11 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+	}
+	
+	private void updateMessage(String message) {
+		this.message = message; 
+		this.paintImmediately(0, 0, WIDTH, HEIGHT+tileSize);
 	}
 
 	/**
@@ -855,6 +875,10 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	private int coordToGrid(int v) {
 		return (v - 1) / tileSize;
 	}
+	
+	private boolean checkValidPos(int x, int y) {
+		return (coordToGrid(x) < sizeX && coordToGrid(y) < sizeY);
+	}
 
 	public boolean getRunning() {
 		return running;
@@ -863,4 +887,5 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	public int getScore() {
 		return rounds;
 	}
+	
 }
