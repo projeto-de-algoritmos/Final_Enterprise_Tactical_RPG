@@ -239,6 +239,10 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		// Mouse Listeners
 		addMouseListener(this);
 		addMouseMotionListener(this);
+		
+		// Inicializa Grafo do Mapa
+		grid = new GraphMatrix<Integer, Integer>(sizeX, sizeY, EMPTY, VISITED, FORBIDDEN, initialCost, minimumCost,
+				maximumCost, costComparator, costAdder);
 
 		// Inicializar Jogador
 		int h = (int) (tileSize * 0.8); // 80% do tileSize
@@ -250,9 +254,6 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		// Inicializar inimigos
 		initializeEnemies();
 
-		// Inicializa Grafo do Mapa
-		grid = new GraphMatrix<Integer, Integer>(sizeX, sizeY, EMPTY, VISITED, FORBIDDEN, initialCost, minimumCost,
-				maximumCost, costComparator, costAdder);
 
 		// Inicializa o Preview do movimento do Jogador
 		preview = new ArrayList<Position>();
@@ -438,7 +439,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 			if (lastMouseX != mx || lastMouseY != my) {
 				lastMouseX = mx;
 				lastMouseY = my;
-				if (mx == playerArmy.get(actualPlayer).getGridX() && my == playerArmy.get(actualPlayer).getGridY())
+				if (verifyCollision(mx,my))
 					inPlayer = true;
 				else {
 					inPlayer = false;
@@ -459,7 +460,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	public void mouseClicked(MouseEvent m) {
 		stopOnTKO();
 		
-		// Move o Jogador Atual
+		// Move o Jogador Atual		
 		if (moveCost <= playerArmy.get(actualPlayer).getMoves() && !inPlayer && !isForbidden(m) && 
 				checkValidPos(m.getX(), m.getY())) {
 			if (stepMode) {
@@ -474,6 +475,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 			}
 			inPlayer = true;
 			actualPlayer++;
+			
 			if (actualPlayer == playerArmy.size()) {
 				actualPlayer = 0;
 				encontraCaminhoInimigos();
@@ -488,7 +490,11 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 						if (enemy.getGridX().equals(player.getGridX()) &&
 								enemy.getGridY().equals(player.getGridY())) {
 							soundPlayer.play("death");
-							stop();
+							
+							if(playerArmy.size() == 1)
+								stop();
+							else
+								playerArmy.remove(player);
 						}
 					}
 			}
