@@ -1,7 +1,7 @@
 package game;
 
+import game.entities.Entity;
 import game.entities.GreedyEnemy;
-import game.entities.Player;
 import graphs.CheapestPath;
 import graphs.GraphMatrix;
 import graphs.Position;
@@ -15,7 +15,7 @@ public class GreedyCheapestPath extends EnemyCheapestPath implements Comparable<
 	private final Boolean valid;
 	private GraphMatrix<Integer, Integer> grid;
 
-	GreedyCheapestPath(GreedyEnemy greedyEnemy, Player player, GraphMatrix<Integer, Integer> grid) {
+	public GreedyCheapestPath(GreedyEnemy greedyEnemy, Entity player, GraphMatrix<Integer, Integer> grid) {
 		super(greedyEnemy, player, grid);
 		this.greedyEnemy = greedyEnemy;
 		this.grid = grid;
@@ -45,7 +45,7 @@ public class GreedyCheapestPath extends EnemyCheapestPath implements Comparable<
 	/**
 	 * @return the weight
 	 */
-	Integer getWeight() {
+	public Integer getWeight() {
 		return weight;
 	}
 

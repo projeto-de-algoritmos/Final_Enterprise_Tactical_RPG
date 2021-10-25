@@ -21,6 +21,7 @@ import game.entities.SimpleEnemy;
 import game.entities.SimpleEnemyArmy;
 import game.entities.Entity;
 import game.entities.GreedyEnemy;
+import game.entities.GreedyEnemyArmy;
 import game.entities.MedianEnemy;
 import game.entities.Player;
 import game.entities.WISEnemy;
@@ -76,6 +77,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	
 	private WISEnemyArmy wisEnemyArmy = new WISEnemyArmy();
 	private SimpleEnemyArmy simpleEnemyArmy = new SimpleEnemyArmy();
+	private GreedyEnemyArmy greedyEnemyArmy = new GreedyEnemyArmy();
 
 	private int sizeX;
 	private int sizeY;
@@ -236,6 +238,10 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		
 		simpleEnemyArmy.setEnemies(simpleEnemies);
 		simpleEnemyArmy.setAllEnemies(allEnemies);
+		
+		greedyEnemyArmy.setEnemies(greedyEnemies);
+		greedyEnemyArmy.setAllEnemies(allEnemies);
+		greedyEnemyArmy.setGreedyArmyMoveBudget(greedyArmyMoveBudget);
 	}
 	
 	// Gera uma posição válida
@@ -573,86 +579,38 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		this.paintImmediately(0, 0, WIDTH, HEIGHT+tileSize);
 	}
 
-	/**
-	 * Encontra caminho para os inimigos ambiciosos usando o algoritmo da mochila
-	 * com itens divisíveis (fractional knapsack) O algoritmo considera como peso o
-	 * número de casas a mover, o valor é o custo do movimento (quanto mais alto o
-	 * custo, mais perto do jogador, pois o caminho traçado é o mais curto), e o
-	 * valor específico é a divisão entre o valor e o peso (é mais valioso um
-	 * movimento que chegue o mais perto do jogador no menor número de casas)
-	 */
+	
 	private void encontraCaminhoInimigosGreedy() {
 		grid.setVisitedToEmpty();
-
-		Integer maxWeight = greedyArmyMoveBudget;
-
-		// used moves
-		Integer currWeight = 0;
-
-		List<GreedyCheapestPath> items = new ArrayList<GreedyCheapestPath>();
-		for (GreedyEnemy enemy : greedyEnemies) {
-			// Impedir inimigos de entrarem uns nos outros
-			lockOtherEnemies(enemy);
-
-			GreedyCheapestPath item = new GreedyCheapestPath(enemy, playerArmy.get(actualPlayer), grid);
-
-			if (item.getValid()) {
-				items.add(item);
-			}
-
-			// Reverter mudança
-			unlockAllEnemies();
+		
+		greedyEnemyArmy.setGreedyArmyMoveBudget(greedyArmyMoveBudget);
+		greedyEnemyArmy.setGrid(grid);
+		greedyEnemyArmy.setTarget(playerArmy.get(actualPlayer));
+		greedyEnemyArmy.findPath();
+		
+		for (GreedyCheapestPath path : greedyEnemyArmy.getOrderedPaths()) {		
+			// Atualiza a tela para mostrar o movimento individual de cada inimigo
+			Integer size = path.getPath().getPath().size() - 1;
+			moveEnemyWthoutCost(path, path.getPath().getPath().get(size));
 		}
-
-		items.sort(null);
-
-		for (GreedyCheapestPath item : items) {
-			Integer lastPos;
-			Integer x;
-			Integer y;
-			if (currWeight + item.getWeight() <= maxWeight) {
-				lastPos = item.getPath().getPath().size() - 1;
-				if (stepMode) {
-					// Movimentação passo a passo
-					moveGreedEnemy(item, item.getPath().getPath().get(lastPos));
-				} else {
-					// Movimentação direta
-					x = item.getPath().getPath().get(lastPos).getPosX();
-					y = item.getPath().getPath().get(lastPos).getPosY();
-					item.getGreedyEnemy().setGridX(x);
-					item.getGreedyEnemy().setGridY(y);
-				}
-
-				currWeight += item.getWeight();
-			} else {
-				Integer remainder = maxWeight - currWeight;
-				lastPos = item.getPath().getPath().size() > remainder ? remainder : item.getPath().getPath().size();
-				if (stepMode) {
-					// Movimentação passo a passo
-					moveGreedEnemy(item, item.getPath().getPath().get(lastPos));
-				} else {
-					// Movimentação direta
-					x = item.getPath().getPath().get(lastPos).getPosX();
-					y = item.getPath().getPath().get(lastPos).getPosY();
-					item.getGreedyEnemy().setGridX(x);
-					item.getGreedyEnemy().setGridY(y);
-				}
-				break;
-			}
-		}
-
-		grid.setVisitedToEmpty();
+		
+		grid.setVisitedToEmpty();		
 	}
 
-	private void moveGreedEnemy(GreedyCheapestPath item, Position finish) {
-		for (Position p : item.getPath().getPath()) {
-			item.getGreedyEnemy().setGridX(p.getPosX());
-			item.getGreedyEnemy().setGridY(p.getPosY());
-			soundPlayer.play("enemyMove");
-			delayPaint(msDelay);
-			if (p == finish) {
-				break;
+	private void moveEnemyWthoutCost(GreedyCheapestPath item, Position finish) {
+		if (stepMode) {
+			for (Position p : item.getPath().getPath()) {
+				item.getGreedyEnemy().setGridX(p.getPosX());
+				item.getGreedyEnemy().setGridY(p.getPosY());
+				soundPlayer.play("enemyMove");
+				delayPaint(msDelay);
+				if (p == finish) {
+					break;
+				}
 			}
+		} else {
+			item.getGreedyEnemy().setGridX(finish.getPosX());
+			item.getGreedyEnemy().setGridY(finish.getPosY());
 		}
 	}
 
