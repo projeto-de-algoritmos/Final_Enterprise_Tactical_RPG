@@ -23,6 +23,7 @@ import game.entities.Entity;
 import game.entities.GreedyEnemy;
 import game.entities.GreedyEnemyArmy;
 import game.entities.MedianEnemy;
+import game.entities.MedianEnemyArmy;
 import game.entities.Player;
 import game.entities.WISEnemy;
 import game.entities.WISEnemyArmy;
@@ -78,6 +79,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	private WISEnemyArmy wisEnemyArmy = new WISEnemyArmy();
 	private SimpleEnemyArmy simpleEnemyArmy = new SimpleEnemyArmy();
 	private GreedyEnemyArmy greedyEnemyArmy = new GreedyEnemyArmy();
+	private MedianEnemyArmy medianEnemyArmy = new MedianEnemyArmy();
 
 	private int sizeX;
 	private int sizeY;
@@ -242,6 +244,9 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		greedyEnemyArmy.setEnemies(greedyEnemies);
 		greedyEnemyArmy.setAllEnemies(allEnemies);
 		greedyEnemyArmy.setGreedyArmyMoveBudget(greedyArmyMoveBudget);
+		
+		medianEnemyArmy.setEnemies(medianEnemies);
+		medianEnemyArmy.setAllEnemies(allEnemies);
 	}
 	
 	// Gera uma posição válida
@@ -614,37 +619,21 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		}
 	}
 
-	/**
-	 * Encontra caminho para o inimigo que está na mediana dos movimentos No caso de
-	 * mediana de número par de inimigos, será escolhido aquele com o maior custo de
-	 * movimentos
-	 */
+
 	private void encontraCaminhoInimigosMedian() {
 		grid.setVisitedToEmpty();
 
-		List<EnemyCheapestPath> items = new ArrayList<EnemyCheapestPath>();
+		medianEnemyArmy.setGrid(grid);
+		medianEnemyArmy.setTarget(playerArmy.get(actualPlayer));
+		medianEnemyArmy.findPath();
 
-		for (MedianEnemy enemy : medianEnemies) {
-			// Impedir inimigos de entrarem uns nos outros
-			lockOtherEnemies(enemy);
+		for (EnemyCheapestPath path : medianEnemyArmy.getOrderedPaths()) {
+			moveEnemyToPlayerWithCost(path.getEnemy(), path.getPath());
 
-			EnemyCheapestPath enemyPath = new EnemyCheapestPath(enemy, playerArmy.get(actualPlayer), grid);
-
-			if (enemyPath.getValid()) {
-				items.add(enemyPath);
+			// Atualiza a tela para mostrar o movimento individual de cada inimigo
+			if (stepMode) {
+				delayPaint(msDelay);
 			}
-
-			// Reverter mudança
-			unlockAllEnemies();
-		}
-
-		if (!items.isEmpty()) {
-			Quickselect<EnemyCheapestPath> quickselect = new Quickselect<EnemyCheapestPath>(
-					new CompareEnemyCheapestPathCost());
-			List<EnemyCheapestPath> median = quickselect.getMedian(items);
-			EnemyCheapestPath choosen = median.get(median.size() - 1);
-
-			moveEnemyToPlayerWithCost(choosen.getEnemy(), choosen.getPath());
 		}
 
 		grid.setVisitedToEmpty();
@@ -665,8 +654,10 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	}
 
 	/**
-	 * @param enemy {@summary Marca outros inimigos como casas proibidas, evitando
-	 *              que dois inimigos fiquem, ao mesmo tempo, em uma casa só}
+	 * Marca outros inimigos como casas proibidas, evitando que dois inimigos
+	 * fiquem, ao mesmo tempo, em uma casa só
+	 * 
+	 * @param enemy
 	 */
 	public void lockOtherEnemies(SimpleEnemy enemy) {
 		for (Entity otherEnemy : allEnemies) {
@@ -677,7 +668,8 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 
 	/**
 	 * Libera a trava que impede os inimigos de estarem juntos em uma mesma casa.
-	 * Sempre execute essa função após executar {@link #lockOtherEnemies(SimpleEnemy)}
+	 * Sempre execute essa função após executar
+	 * {@link #lockOtherEnemies(SimpleEnemy)}
 	 */
 	public void unlockAllEnemies() {
 		for (Entity enemy : allEnemies) {
@@ -686,9 +678,11 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	}
 
 	/**
+	 * Move inimigo até o jogador respeitando o custo máximo permitido pelo inimigo
+	 * 
 	 * @param enemy
-	 * @param path  {@summary Move inimigo até o jogador respeitando o custo máximo
-	 *              permitido pelo inimigo.}
+	 * @param path
+	 * 
 	 */
 	private void moveEnemyToPlayerWithCost(SimpleEnemy enemy, CheapestPath<Position, Integer> path) {
 		Integer actualCost = 0;
