@@ -3,7 +3,7 @@ package game.entities;
 import java.awt.Color;
 import java.awt.Graphics;
 
-public class WISEnemy extends Enemy {
+public class WISEnemy extends SimpleEnemy {
 
 	public WISEnemy(Integer moves, Integer initialGridX, Integer initialGridY, Integer grid2PosMultiplyer,
 			Integer grid2PosBias, Integer height, Integer width, Color color) {

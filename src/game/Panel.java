@@ -11,16 +11,20 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BinaryOperator;
 
 import javax.swing.JPanel;
 
-import game.entities.Enemy;
+import game.entities.SimpleEnemy;
+import game.entities.SimpleEnemyArmy;
 import game.entities.Entity;
 import game.entities.GreedyEnemy;
+import game.entities.GreedyEnemyArmy;
 import game.entities.MedianEnemy;
+import game.entities.MedianEnemyArmy;
 import game.entities.Player;
 import game.entities.WISEnemy;
 import game.entities.WISEnemyArmy;
@@ -29,118 +33,7 @@ import graphs.CheapestPath;
 import graphs.GraphMatrix;
 import graphs.Position;
 
-public class Panel extends JPanel implements MouseListener, MouseMotionListener {
-	private class EnemyCheapestPath {
-		private final Enemy enemy;
-		private final CheapestPath<Position, Integer> path;
-		private final Boolean valid;
-
-		private EnemyCheapestPath(Enemy enemy, Entity player) {
-			this.enemy = enemy;
-			this.path = grid.dijkstra(new Position(enemy.getGridX(), enemy.getGridY()),
-					new Position(player.getGridX(), player.getGridY()));
-			this.valid = this.path == null ? false : true;
-		}
-
-		/**
-		 * @return the Enemy
-		 */
-		Enemy getEnemy() {
-			return enemy;
-		}
-
-		/**
-		 * @return the path
-		 */
-		CheapestPath<Position, Integer> getPath() {
-			return path;
-		}
-
-		/**
-		 * @return the valid
-		 */
-		Boolean getValid() {
-			return valid;
-		}
-	}
-
-	private class CompareEnemyCheapestPathCost implements Comparator<EnemyCheapestPath> {
-		@Override
-		public int compare(EnemyCheapestPath o1, EnemyCheapestPath o2) {
-			if (o1.getPath().getTotalCost() < o2.getPath().getTotalCost()) {
-				return -1;
-			}
-
-			if (o1.getPath().getTotalCost() > o2.getPath().getTotalCost()) {
-				return 1;
-			}
-
-			return 0;
-		}
-	}
-
-	private class GreedyCheapestPath extends EnemyCheapestPath implements Comparable<GreedyCheapestPath> {
-		private final GreedyEnemy greedyEnemy;
-		private final CheapestPath<Position, Integer> path;
-		private final Integer weight;
-		private final Integer value;
-		private final Double specificValue;
-		private final Boolean valid;
-
-		GreedyCheapestPath(GreedyEnemy greedyEnemy, Player player) {
-			super(greedyEnemy, player);
-			this.greedyEnemy = greedyEnemy;
-			this.path = grid.dijkstra(new Position(greedyEnemy.getGridX(), greedyEnemy.getGridY()),
-					new Position(player.getGridX(), player.getGridY()));
-			this.weight = this.path == null ? null : path.getPath().size();
-			this.value = this.path == null ? null : path.getTotalCost();
-			this.specificValue = this.path == null ? null : (double) value / (double) weight;
-			this.valid = this.path == null ? false : true;
-		}
-
-		/**
-		 * @return the greedyEnemy
-		 */
-		GreedyEnemy getGreedyEnemy() {
-			return greedyEnemy;
-		}
-
-		/**
-		 * @return the path
-		 */
-		@Override
-		CheapestPath<Position, Integer> getPath() {
-			return path;
-		}
-
-		/**
-		 * @return the weight
-		 */
-		Integer getWeight() {
-			return weight;
-		}
-
-		/**
-		 * @return the specificValue
-		 */
-		Double getSpecificValue() {
-			return specificValue;
-		}
-
-		/**
-		 * @return the valid
-		 */
-		@Override
-		Boolean getValid() {
-			return valid;
-		}
-
-		@Override
-		public int compareTo(GreedyCheapestPath o) {
-			return Double.compare(this.getSpecificValue(), o.getSpecificValue());
-		}
-	}
-	
+public class Panel extends JPanel implements MouseListener, MouseMotionListener {	
 	private class CompareWISCheapestPathEnd implements Comparator<WISCheapestPath> {
 		@Override
 		public int compare(WISCheapestPath o1, WISCheapestPath o2) {
@@ -162,7 +55,8 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	private static final Integer VISITED = 1;
 	private static int WIDTH;
 	private static int HEIGHT;
-	private Player player;
+	private List<Player> playerArmy = new CopyOnWriteArrayList<Player>();
+	private int actualPlayer = 0;
 	private Map map;
 	private List<Position> preview;
 	private GraphMatrix<Integer, Integer> grid;
@@ -177,17 +71,21 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	private final int minimumCost = 0;
 	private final int maximumCost = Integer.MAX_VALUE;
 
-	private List<Enemy> enemies = new ArrayList<Enemy>();
+	private List<SimpleEnemy> simpleEnemies = new ArrayList<SimpleEnemy>();
 	private List<GreedyEnemy> greedyEnemies = new ArrayList<GreedyEnemy>();
 	private List<MedianEnemy> medianEnemies = new ArrayList<MedianEnemy>();
 	private List<WISEnemy> wisEnemies = new ArrayList<WISEnemy>();
 	private List<Entity> allEnemies = new ArrayList<Entity>();
 	
 	private WISEnemyArmy wisEnemyArmy = new WISEnemyArmy();
+	private SimpleEnemyArmy simpleEnemyArmy = new SimpleEnemyArmy();
+	private GreedyEnemyArmy greedyEnemyArmy = new GreedyEnemyArmy();
+	private MedianEnemyArmy medianEnemyArmy = new MedianEnemyArmy();
 
 	private int sizeX;
 	private int sizeY;
 	final private int playerMoves = 5;
+	final private int safeOffset = 6;
 	final private Comparator<Integer> costComparator = new Comparator<Integer>() {
 		@Override
 		public int compare(Integer o1, Integer o2) {
@@ -215,12 +113,14 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	private int msLongerDelay = 2 * msDelay;
 	
 	private SoundPlayer soundPlayer;
+	private String message;
 
 	public Panel(int size, int width, int height, boolean stepMode, boolean soundEnabled) {
-
 		// Step Mode
 		this.stepMode = stepMode;
 
+		message = "Your Turn";
+		
 		// Define os tamanhos
 		WIDTH = width;
 		HEIGHT = height;
@@ -230,63 +130,26 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 
 		// Configurações do Painel
 		setFocusable(true);
-		setPreferredSize(new Dimension(WIDTH, HEIGHT));
+		setPreferredSize(new Dimension(WIDTH, HEIGHT+tileSize));
 
 		// Mouse Listeners
 		addMouseListener(this);
 		addMouseMotionListener(this);
+		
+		// Inicializa Grafo do Mapa
+		grid = new GraphMatrix<Integer, Integer>(sizeX, sizeY, EMPTY, VISITED, FORBIDDEN, initialCost, minimumCost,
+				maximumCost, costComparator, costAdder);
 
 		// Inicializar Jogador
 		int h = (int) (tileSize * 0.8); // 80% do tileSize
 		int w = (int) (tileSize * 0.8); // 80% do tileSize
 		int off = (tileSize - w) / 2; // Meio do tile
-		player = new Player(playerMoves, 5, 5, tileSize, off, h, w, Color.BLUE);
+		playerArmy.add(new Player(playerMoves, 5, 5, tileSize, off, h, w, Color.BLUE));
+		playerArmy.add(new Player(playerMoves, 5, 10, tileSize, off, h, w, Color.BLUE));
 
-		// Inicializar inimigos comuns
-		h = (int) (tileSize * 0.6); // 60% do tileSize
-		w = (int) (tileSize * 0.6); // 60% do tileSize
-		off = (tileSize - w) / 2; // Meio do tile
-		enemies.add(new Enemy(enemyMoves, 10, 10, tileSize, off, h, w, Color.RED));
-		enemies.add(new Enemy(enemyMoves, 15, 15, tileSize, off, h, w, Color.RED));
-		enemies.add(new Enemy(enemyMoves, 10, 15, tileSize, off, h, w, Color.RED));
+		// Inicializar inimigos
+		initializeEnemies();
 
-		// Inicializar inimigos ambiciosos
-		h = (int) (tileSize * 0.95); // 95% do tileSize
-		w = (int) (tileSize * 0.95); // 95% do tileSize
-		off = (tileSize - w) / 2; // Meio do tile
-		greedyEnemies.add(new GreedyEnemy(enemyMoves, 9, 9, tileSize, off, h, w, Color.RED));
-		greedyEnemies.add(new GreedyEnemy(enemyMoves, 14, 14, tileSize, off, h, w, Color.RED));
-		greedyEnemies.add(new GreedyEnemy(enemyMoves, 9, 14, tileSize, off, h, w, Color.RED));
-
-		// Inicializar inimigos da mediana
-		h = (int) (tileSize * 0.9); // 90% do tileSize
-		w = (int) (tileSize * 0.9); // 90% do tileSize
-		off = (tileSize - w) / 2; // Meio do tile
-		medianEnemies.add(new MedianEnemy(enemyMoves, 8, 8, tileSize, off, h, w, Color.RED));
-		medianEnemies.add(new MedianEnemy(enemyMoves, 13, 13, tileSize, off, h, w, Color.RED));
-		medianEnemies.add(new MedianEnemy(enemyMoves, 8, 13, tileSize, off, h, w, Color.RED));
-		
-		// Inicializar inimigos do agendamento com peso
-		h = (int) (tileSize * 0.9); // 90% do tileSize
-		w = (int) (tileSize * 0.9); // 90% do tileSize
-		off = (tileSize - w) / 2; // Meio do tile
-		wisEnemies.add(new WISEnemy(enemyMoves, 7, 7, tileSize, off, h, w, Color.RED));
-		wisEnemies.add(new WISEnemy(enemyMoves, 12, 12, tileSize, off, h, w, Color.RED));
-		wisEnemies.add(new WISEnemy(enemyMoves, 7, 12, tileSize, off, h, w, Color.RED));
-
-		// Lista de inimigos
-		allEnemies.addAll(enemies);
-		allEnemies.addAll(greedyEnemies);
-		allEnemies.addAll(medianEnemies);
-		allEnemies.addAll(wisEnemies);
-		
-		// Inicializar exércitos
-		wisEnemyArmy.setEnemies(wisEnemies);
-		wisEnemyArmy.setAllEnemies(allEnemies);
-
-		// Inicializa Grafo do Mapa
-		grid = new GraphMatrix<Integer, Integer>(sizeX, sizeY, EMPTY, VISITED, FORBIDDEN, initialCost, minimumCost,
-				maximumCost, costComparator, costAdder);
 
 		// Inicializa o Preview do movimento do Jogador
 		preview = new ArrayList<Position>();
@@ -311,11 +174,108 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		map = new Map(grid, hash, WIDTH, HEIGHT, sizeX, sizeY);
 		addRandomCosts((sizeX * sizeY) / 2, hash.size() + 1);
 		addRandomForbidden(sizeX);
-		grid.setElementCost(player.getGridX(), player.getGridY(), initialCost);
-		grid.setElementValue(player.getGridX(), player.getGridY(), EMPTY);
+		for (Player player : playerArmy) {
+			grid.setElementCost(player.getGridX(), player.getGridY(), initialCost);
+			grid.setElementValue(player.getGridX(), player.getGridY(), EMPTY);
+		}
+		
 
 		// Inicia o Jogo
 		start();
+	}
+	
+	// Inicializa inimigos
+	private void initializeEnemies() {
+		int minX = playerArmy.get(0).getGridX() + safeOffset;
+		int minY = playerArmy.get(0).getGridY() + safeOffset;
+		int maxX = sizeX;
+		int maxY = sizeY;
+		
+		// Inicializar inimigos comuns
+		int h = (int) (tileSize * 0.6); // 60% do tileSize
+		int w = (int) (tileSize * 0.6); // 60% do tileSize
+		int off = (tileSize - w) / 2; // Meio do tile
+		for(int i=0;i<3;i++) {
+			Position p = generateRandomPos(minX, minY, maxX, maxY);
+			int x = p.getPosX();
+			int y = p.getPosY();
+			SimpleEnemy e = new SimpleEnemy(enemyMoves, x, y, tileSize, off, h, w, Color.RED);
+			simpleEnemies.add(e);
+			allEnemies.add(e);			
+		}
+		// Inicializar inimigos ambiciosos
+		h = (int) (tileSize * 0.95); // 95% do tileSize
+		w = (int) (tileSize * 0.95); // 95% do tileSize
+		off = (tileSize - w) / 2; // Meio do tile
+		for(int i=0;i<3;i++) {
+			Position p = generateRandomPos(minX, minY, maxX, maxY);
+			int x = p.getPosX();
+			int y = p.getPosY();
+			GreedyEnemy e = new GreedyEnemy(enemyMoves, x, y, tileSize, off, h, w, Color.RED);
+			greedyEnemies.add(e);
+			allEnemies.add(e);
+		}
+		// Inicializar inimigos da mediana
+		h = (int) (tileSize * 0.9); // 90% do tileSize
+		w = (int) (tileSize * 0.9); // 90% do tileSize
+		off = (tileSize - w) / 2; // Meio do tile
+		for(int i=0;i<3;i++) {
+			Position p = generateRandomPos(minX, minY, maxX, maxY);
+			int x = p.getPosX();
+			int y = p.getPosY();
+			MedianEnemy e = new MedianEnemy(enemyMoves, x, y, tileSize, off, h, w, Color.RED);
+			medianEnemies.add(e);
+			allEnemies.add(e);
+		}
+		// Inicializar inimigos do agendamento com peso
+		for(int i=0;i<3;i++) {
+			Position p = generateRandomPos(minX, minY, maxX, maxY);
+			int x = p.getPosX();
+			int y = p.getPosY();
+			WISEnemy e = new WISEnemy(enemyMoves, x, y, tileSize, off, h, w, Color.RED);
+			wisEnemies.add(e);
+			allEnemies.add(e);
+		}
+		wisEnemyArmy.setEnemies(wisEnemies);
+		wisEnemyArmy.setAllEnemies(allEnemies);
+		
+		simpleEnemyArmy.setEnemies(simpleEnemies);
+		simpleEnemyArmy.setAllEnemies(allEnemies);
+		
+		greedyEnemyArmy.setEnemies(greedyEnemies);
+		greedyEnemyArmy.setAllEnemies(allEnemies);
+		greedyEnemyArmy.setGreedyArmyMoveBudget(greedyArmyMoveBudget);
+		
+		medianEnemyArmy.setEnemies(medianEnemies);
+		medianEnemyArmy.setAllEnemies(allEnemies);
+	}
+	
+	// Gera uma posição válida
+	private Position generateRandomPos(int minX, int minY, int maxX, int maxY) {
+		int randomX = 0;
+		int randomY = 0;
+		boolean acceptable = false;
+		
+		while(!acceptable) {
+			randomX = ThreadLocalRandom.current().nextInt(minX, sizeX);
+			randomY = ThreadLocalRandom.current().nextInt(minY, sizeY);
+			acceptable = !verifyCollision(randomX, randomY);
+		}
+		return new Position(randomX, randomY);
+	}
+	
+	// Verifica a colisão com todas as entidades
+	private boolean verifyCollision(int x, int y) {
+		List<Entity> entities = new ArrayList<Entity>();
+		entities.addAll(allEnemies);
+		entities.addAll(playerArmy);
+		
+		for (Entity entity : entities) {
+			if (checkOverride(x, y, entity.getGridX(), entity.getGridY())) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	// Altera o custo de até <number> casas aleatórias
@@ -330,25 +290,12 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 
 	// Adiciona até <number> obstáculos intransponíveis
 	private void addRandomForbidden(int number) {
-		List<Entity> entities = new ArrayList<Entity>();
-		entities.addAll(allEnemies);
-		entities.add(player);
-
 		for (int i = 0; i < number; i++) {
-			Boolean acceptable = true;
-			int randomX = ThreadLocalRandom.current().nextInt(0, sizeX);
-			int randomY = ThreadLocalRandom.current().nextInt(0, sizeY);
-
-			// Verifica sobreposição com as entidades
-			for (Entity entity : entities) {
-				if (checkOverride(randomX, randomY, entity.getGridX(), entity.getGridY())) {
-					acceptable = false;
-				}
-			}
-			// Apenas acrescenta o obstáculo caso a casa esteja livre
-			if (acceptable) {
-				grid.setElementValue(randomX, randomY, FORBIDDEN);
-			}
+			Position p = generateRandomPos(0, 0, sizeX, sizeY);
+			int x = p.getPosX();
+			int y = p.getPosY();
+			
+			grid.setElementValue(x, y, FORBIDDEN);
 		}
 	}
 
@@ -368,12 +315,19 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 			drawPreview(g2d);
 		}
 		// Desenha o Jogador
-		player.draw(g2d);
+		for (Player player : playerArmy) {
+			player.draw(g2d);
+		}
 
 		// Desenha inimigos
 		for (Entity enemy : allEnemies) {
 			enemy.draw(g2d);
 		}
+		
+		// Desenha mensagens
+		g2d.setColor(Color.BLACK);
+		g2d.drawString(message, gridToCoord(1), gridToCoord(sizeY)+tileSize/2+5);
+		g2d.drawString("Rounds Survived: " + String.valueOf(rounds), gridToCoord(sizeX/2), gridToCoord(sizeY)+tileSize/2+5);
 	}
 
 	public void stop() {
@@ -382,27 +336,32 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 
 	@Override
 	public void mouseMoved(MouseEvent m) {
-		stopOnTKO();
-
-		// Coordenadas atuais do mouse na grade
-		int mx = coordToGrid(m.getX());
-		int my = coordToGrid(m.getY());
-
-		// Atualiza as coordenadas do Mouse
-		if (lastMouseX != mx || lastMouseY != my) {
-			lastMouseX = mx;
-			lastMouseY = my;
-			if (mx == player.getGridX() && my == player.getGridY())
-				inPlayer = true;
-			else {
-				inPlayer = false;
-				try {
-					encontraCaminho();
-				} catch (ArrayIndexOutOfBoundsException e) {
-
+		if(message == "Your Turn" && playerArmy.size() > 0) {
+				stopOnTKO();
+			if(checkValidPos(m.getX(), m.getY())) {
+				// Coordenadas atuais do mouse na grade
+				int mx = coordToGrid(m.getX());
+				int my = coordToGrid(m.getY());
+		
+				// Atualiza as coordenadas do Mouse
+				if (lastMouseX != mx || lastMouseY != my) {
+					lastMouseX = mx;
+					lastMouseY = my;
+					if (verifyCollision(mx,my))
+						inPlayer = true;
+					else {
+						inPlayer = false;
+						try {
+							encontraCaminho();
+						} catch (ArrayIndexOutOfBoundsException e) {
+		
+						}
+					}
+					repaint();
 				}
 			}
-			repaint();
+			else
+				mouseExited(m);
 		}
 	}
 
@@ -410,33 +369,50 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	public void mouseClicked(MouseEvent m) {
 		stopOnTKO();
 
-		// Move o Jogador
-		if (moveCost <= player.getMoves() && !inPlayer && !isForbidden(m)) {
+		// Move o Jogador Atual
+		if (moveCost <= playerArmy.get(actualPlayer).getMoves() && !inPlayer && !isForbidden(m)
+				&& checkValidPos(m.getX(), m.getY())) {
 			if (stepMode) {
 				// Movimentação passo a passo
+				previewVisibility = false;
 				movePlayer();
 			} else {
 				// Movimentação direta
-				player.setGridX((m.getX() - 1) / tileSize);
-				player.setGridY((m.getY() - 1) / tileSize);
+				playerArmy.get(actualPlayer).setGridX((coordToGrid(m.getX())));
+				playerArmy.get(actualPlayer).setGridY((coordToGrid(m.getY())));
 				soundPlayer.play("playerMove");
 			}
 			inPlayer = true;
+			playerArmy.get(actualPlayer).changeState();
+			actualPlayer++;
 
-			encontraCaminhoInimigos();
-
-			rounds++;
-			if (rounds % 10 == 0 && enemyMoves <= 2 * playerMoves)
-				enemyMoves++;
-			for (Enemy enemy : enemies) {
-				enemy.setMoves(enemyMoves);
-			}
-
-			for (Entity enemy : allEnemies) {
-				if (enemy.getGridX().equals(player.getGridX()) && enemy.getGridY().equals(player.getGridY())) {
-					soundPlayer.play("death");
-					stop();
+			if (actualPlayer == playerArmy.size()) {
+				actualPlayer = 0;
+				encontraCaminhoInimigos();
+				rounds++;
+				if (rounds % 10 == 0 && enemyMoves <= 2 * playerMoves) {
+					enemyMoves++;
 				}
+				for (SimpleEnemy enemy : simpleEnemies) {
+					enemy.setMoves(enemyMoves);
+				}
+
+				for (Player player : playerArmy) {
+					player.changeState();
+					for (Entity enemy : allEnemies) {
+						if (enemy.getGridX().equals(player.getGridX()) && enemy.getGridY().equals(player.getGridY())) {
+							soundPlayer.play("death");
+
+							if (playerArmy.size() == 1) {
+								stop();
+							} else {
+								playerArmy.remove(player);
+							}
+						}
+					}
+				}
+			} else {
+				previewVisibility = true;
 			}
 			repaint();
 		}
@@ -444,12 +420,12 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 
 	private void movePlayer() {
 		int counter = 0;
-		previewVisibility = false;
+		
 		for (Position pos : preview) {
 			if (counter > playerMoves)
 				break;
-			player.setGridX(pos.getPosX());
-			player.setGridY(pos.getPosY());
+			playerArmy.get(actualPlayer).setGridX(pos.getPosX());
+			playerArmy.get(actualPlayer).setGridY(pos.getPosY());
 			soundPlayer.play("playerMove");
 			delayPaint(msDelay);
 			counter++;
@@ -464,11 +440,13 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 
 	@Override
 	public void mouseExited(MouseEvent m) {
-		stopOnTKO();
-		inPlayer = true;
-		lastMouseX = player.getGridX();
-		lastMouseY = player.getGridY();
-		repaint();
+		if(message == "Your Turn" && playerArmy.size() > 0) {
+			stopOnTKO();
+			inPlayer = true;
+			lastMouseX = playerArmy.get(actualPlayer).getGridX();
+			lastMouseY = playerArmy.get(actualPlayer).getGridY();
+			repaint();
+		}
 	}
 
 	@Override
@@ -491,10 +469,10 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		g.setColor(Color.RED);
 		if (!preview.isEmpty() && !inPlayer) {
 			for (Position e : preview) {
-				if (moveCost > player.getMoves())
+				if (moveCost > playerArmy.get(actualPlayer).getMoves())
 					break;
 				if (x != -1 && y != -1) {
-					if (grid.getElementCost(e) + moveCost <= player.getMoves())
+					if (grid.getElementCost(e) + moveCost <= playerArmy.get(actualPlayer).getMoves())
 						g.drawLine(gridToCoord(e.getPosX()) + tileSize / 2, gridToCoord(e.getPosY()) + tileSize / 2,
 								gridToCoord(x) + tileSize / 2, gridToCoord(y) + tileSize / 2);
 					moveCost += grid.getElementCost(e);
@@ -527,7 +505,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 			grid.setElementValue(e.getGridX(), e.getGridY(), FORBIDDEN);
 		}
 
-		List<Position> ps = grid.visitableNeighbours(player.getGridX(), player.getGridY());
+		List<Position> ps = grid.visitableNeighbours(playerArmy.get(actualPlayer).getGridX(), playerArmy.get(actualPlayer).getGridY());
 
 		if (ps.isEmpty()) {
 			stop();
@@ -547,8 +525,8 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 			grid.setElementValue(e.getGridX(), e.getGridY(), FORBIDDEN);
 		}
 
-		CheapestPath<Position, Integer> cpt = grid.dijkstra(new Position(player.getGridX(), player.getGridY()),
-				new Position(lastMouseX, lastMouseY));
+		CheapestPath<Position, Integer> cpt = grid.dijkstra(new Position(playerArmy.get(actualPlayer).getGridX(), 
+				playerArmy.get(actualPlayer).getGridY()), new Position(lastMouseX, lastMouseY));
 		preview = cheapestPathToList(cpt);
 
 		// Reverter modificação
@@ -561,6 +539,8 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 
 	private void encontraCaminhoInimigos() {
 		grid.setVisitedToEmpty();
+		
+		updateMessage("Enemy Turn");
 
 		// Caminho dos inimigos comuns
 		encontraCaminhoInimigosComuns();
@@ -578,31 +558,37 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		previewVisibility = true;
 
 		grid.setVisitedToEmpty();
+		
+		updateMessage("Your Turn");
+	}
+	
+	private List<Entity> playerArmyToEntity() {
+		List<Entity> convertedArmy = new ArrayList<Entity>();
+		
+		for (Entity e : playerArmy) {
+			convertedArmy.add(e);
+		}
+		
+		return convertedArmy;
 	}
 
 	private void encontraCaminhoInimigosComuns() {
 		grid.setVisitedToEmpty();
-
-		for (Enemy enemy : enemies) {
-			// Impedir inimigos de entrarem uns nos outros
-			lockOtherEnemies(enemy);
-
-			// Caminho do inimigo
-			EnemyCheapestPath enemyPath = new EnemyCheapestPath(enemy, player);
-			if (enemyPath.getValid()) {
-				moveEnemyToPlayerWithCost(enemyPath.getEnemy(), enemyPath.getPath());
-			}
-
-			// Reverter mudança
-			unlockAllEnemies();
-
-			grid.setVisitedToEmpty();
-
+		
+		simpleEnemyArmy.setGrid(grid);
+		simpleEnemyArmy.setTargets(playerArmyToEntity());
+		simpleEnemyArmy.findPath();
+		
+		for (EnemyCheapestPath path : simpleEnemyArmy.getOrderedPaths()) {
+			moveEnemyToPlayerWithCost(path.getEnemy(), path.getPath());
+			
 			// Atualiza a tela para mostrar o movimento individual de cada inimigo
 			if (stepMode) {
 				delayPaint(msDelay);
 			}
 		}
+		
+		grid.setVisitedToEmpty();
 	}
 
 	private void delayPaint(int delay) {
@@ -613,131 +599,72 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 			e.printStackTrace();
 		}
 	}
+	
+	private void updateMessage(String message) {
+		this.message = message; 
+		this.paintImmediately(0, 0, WIDTH, HEIGHT+tileSize);
+	}
 
-	/**
-	 * Encontra caminho para os inimigos ambiciosos usando o algoritmo da mochila
-	 * com itens divisíveis (fractional knapsack) O algoritmo considera como peso o
-	 * número de casas a mover, o valor é o custo do movimento (quanto mais alto o
-	 * custo, mais perto do jogador, pois o caminho traçado é o mais curto), e o
-	 * valor específico é a divisão entre o valor e o peso (é mais valioso um
-	 * movimento que chegue o mais perto do jogador no menor número de casas)
-	 */
+	
 	private void encontraCaminhoInimigosGreedy() {
 		grid.setVisitedToEmpty();
-
-		Integer maxWeight = greedyArmyMoveBudget;
-
-		// used moves
-		Integer currWeight = 0;
-
-		List<GreedyCheapestPath> items = new ArrayList<GreedyCheapestPath>();
-		for (GreedyEnemy enemy : greedyEnemies) {
-			// Impedir inimigos de entrarem uns nos outros
-			lockOtherEnemies(enemy);
-
-			GreedyCheapestPath item = new GreedyCheapestPath(enemy, player);
-
-			if (item.getValid()) {
-				items.add(item);
-			}
-
-			// Reverter mudança
-			unlockAllEnemies();
+		
+		greedyEnemyArmy.setGreedyArmyMoveBudget(greedyArmyMoveBudget);
+		greedyEnemyArmy.setGrid(grid);
+		greedyEnemyArmy.setTargets(playerArmyToEntity());
+		greedyEnemyArmy.findPath();
+		
+		for (GreedyCheapestPath path : greedyEnemyArmy.getOrderedPaths()) {		
+			// Atualiza a tela para mostrar o movimento individual de cada inimigo
+			Integer size = path.getPath().getPath().size() - 1;
+			moveEnemyWthoutCost(path, path.getPath().getPath().get(size));
 		}
-
-		items.sort(null);
-
-		for (GreedyCheapestPath item : items) {
-			Integer lastPos;
-			Integer x;
-			Integer y;
-			if (currWeight + item.getWeight() <= maxWeight) {
-				lastPos = item.getPath().getPath().size() - 1;
-				if (stepMode) {
-					// Movimentação passo a passo
-					moveGreedEnemy(item, item.getPath().getPath().get(lastPos));
-				} else {
-					// Movimentação direta
-					x = item.getPath().getPath().get(lastPos).getPosX();
-					y = item.getPath().getPath().get(lastPos).getPosY();
-					item.getGreedyEnemy().setGridX(x);
-					item.getGreedyEnemy().setGridY(y);
-				}
-
-				currWeight += item.getWeight();
-			} else {
-				Integer remainder = maxWeight - currWeight;
-				lastPos = item.getPath().getPath().size() > remainder ? remainder : item.getPath().getPath().size();
-				if (stepMode) {
-					// Movimentação passo a passo
-					moveGreedEnemy(item, item.getPath().getPath().get(lastPos));
-				} else {
-					// Movimentação direta
-					x = item.getPath().getPath().get(lastPos).getPosX();
-					y = item.getPath().getPath().get(lastPos).getPosY();
-					item.getGreedyEnemy().setGridX(x);
-					item.getGreedyEnemy().setGridY(y);
-				}
-				break;
-			}
-		}
-
-		grid.setVisitedToEmpty();
+		
+		grid.setVisitedToEmpty();		
 	}
 
-	private void moveGreedEnemy(GreedyCheapestPath item, Position finish) {
-		for (Position p : item.getPath().getPath()) {
-			item.getGreedyEnemy().setGridX(p.getPosX());
-			item.getGreedyEnemy().setGridY(p.getPosY());
-			soundPlayer.play("enemyMove");
-			delayPaint(msDelay);
-			if (p == finish) {
-				break;
+	private void moveEnemyWthoutCost(GreedyCheapestPath item, Position finish) {
+		if (stepMode) {
+			for (Position p : item.getPath().getPath()) {
+				item.getGreedyEnemy().setGridX(p.getPosX());
+				item.getGreedyEnemy().setGridY(p.getPosY());
+				soundPlayer.play("enemyMove");
+				delayPaint(msDelay);
+				if (p == finish) {
+					break;
+				}
 			}
+		} else {
+			item.getGreedyEnemy().setGridX(finish.getPosX());
+			item.getGreedyEnemy().setGridY(finish.getPosY());
 		}
 	}
 
-	/**
-	 * Encontra caminho para o inimigo que está na mediana dos movimentos No caso de
-	 * mediana de número par de inimigos, será escolhido aquele com o maior custo de
-	 * movimentos
-	 */
+
 	private void encontraCaminhoInimigosMedian() {
 		grid.setVisitedToEmpty();
 
-		List<EnemyCheapestPath> items = new ArrayList<EnemyCheapestPath>();
+		medianEnemyArmy.setGrid(grid);
+		medianEnemyArmy.setTargets(playerArmyToEntity());
+		medianEnemyArmy.findPath();
 
-		for (MedianEnemy enemy : medianEnemies) {
-			// Impedir inimigos de entrarem uns nos outros
-			lockOtherEnemies(enemy);
+		for (EnemyCheapestPath path : medianEnemyArmy.getOrderedPaths()) {
+			moveEnemyToPlayerWithCost(path.getEnemy(), path.getPath());
 
-			EnemyCheapestPath enemyPath = new EnemyCheapestPath(enemy, player);
-
-			if (enemyPath.getValid()) {
-				items.add(enemyPath);
+			// Atualiza a tela para mostrar o movimento individual de cada inimigo
+			if (stepMode) {
+				delayPaint(msDelay);
 			}
-
-			// Reverter mudança
-			unlockAllEnemies();
-		}
-
-		if (!items.isEmpty()) {
-			Quickselect<EnemyCheapestPath> quickselect = new Quickselect<EnemyCheapestPath>(
-					new CompareEnemyCheapestPathCost());
-			List<EnemyCheapestPath> median = quickselect.getMedian(items);
-			EnemyCheapestPath choosen = median.get(median.size() - 1);
-
-			moveEnemyToPlayerWithCost(choosen.getEnemy(), choosen.getPath());
 		}
 
 		grid.setVisitedToEmpty();
 	}
 	
-	void encontraCaminhoInimigosWIS() {
+	private void encontraCaminhoInimigosWIS() {
 		grid.setVisitedToEmpty();
 		
 		wisEnemyArmy.setGrid(grid);
-		wisEnemyArmy.setTarget(player);
+		wisEnemyArmy.setTargets(playerArmyToEntity());
 		wisEnemyArmy.findPath();
 		
 		for (WISCheapestPath path : wisEnemyArmy.getOrderedPaths()) {
@@ -748,10 +675,12 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	}
 
 	/**
-	 * @param enemy {@summary Marca outros inimigos como casas proibidas, evitando
-	 *              que dois inimigos fiquem, ao mesmo tempo, em uma casa só}
+	 * Marca outros inimigos como casas proibidas, evitando que dois inimigos
+	 * fiquem, ao mesmo tempo, em uma casa só
+	 * 
+	 * @param enemy
 	 */
-	public void lockOtherEnemies(Enemy enemy) {
+	public void lockOtherEnemies(SimpleEnemy enemy) {
 		for (Entity otherEnemy : allEnemies) {
 			grid.setElementValue(otherEnemy.getGridX(), otherEnemy.getGridY(), VISITED);
 		}
@@ -760,7 +689,8 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 
 	/**
 	 * Libera a trava que impede os inimigos de estarem juntos em uma mesma casa.
-	 * Sempre execute essa função após executar {@link #lockOtherEnemies(Enemy)}
+	 * Sempre execute essa função após executar
+	 * {@link #lockOtherEnemies(SimpleEnemy)}
 	 */
 	public void unlockAllEnemies() {
 		for (Entity enemy : allEnemies) {
@@ -769,15 +699,17 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	}
 
 	/**
+	 * Move inimigo até o jogador respeitando o custo máximo permitido pelo inimigo
+	 * 
 	 * @param enemy
-	 * @param path  {@summary Move inimigo até o jogador respeitando o custo máximo
-	 *              permitido pelo inimigo.}
+	 * @param path
+	 * 
 	 */
-	private void moveEnemyToPlayerWithCost(Enemy enemy, CheapestPath<Position, Integer> path) {
+	private void moveEnemyToPlayerWithCost(SimpleEnemy enemy, CheapestPath<Position, Integer> path) {
 		Integer actualCost = 0;
 		Position endPosition = new Position(enemy.getGridX(), enemy.getGridY());
 		Integer initialTileCost = grid.getElementCost(endPosition);
-		Position playerPosition = new Position(player.getGridX(), player.getGridY());
+		Position playerPosition = new Position(playerArmy.get(actualPlayer).getGridX(), playerArmy.get(actualPlayer).getGridY());
 		for (Position p : path.getPath()) {
 			actualCost += grid.getElementCost(p);
 
@@ -823,6 +755,10 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	private int coordToGrid(int v) {
 		return (v - 1) / tileSize;
 	}
+	
+	private boolean checkValidPos(int x, int y) {
+		return (coordToGrid(x) < sizeX && coordToGrid(y) < sizeY);
+	}
 
 	public boolean getRunning() {
 		return running;
@@ -831,4 +767,5 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	public int getScore() {
 		return rounds;
 	}
+	
 }

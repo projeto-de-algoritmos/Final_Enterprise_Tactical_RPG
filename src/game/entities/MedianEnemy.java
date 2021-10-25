@@ -3,7 +3,7 @@ package game.entities;
 import java.awt.Color;
 import java.awt.Graphics;
 
-public class MedianEnemy extends Enemy {
+public class MedianEnemy extends SimpleEnemy {
 
 	public MedianEnemy(Integer moves, Integer initialGridX, Integer initialGridY, Integer grid2PosMultiplyer,
 			Integer grid2PosBias, Integer height, Integer width, Color color) {

@@ -3,7 +3,7 @@ package game.entities;
 import java.awt.Color;
 import java.awt.Graphics;
 
-public class GreedyEnemy extends Enemy {
+public class GreedyEnemy extends SimpleEnemy {
 
 	public GreedyEnemy(Integer moves, Integer initialGridX, Integer initialGridY, Integer grid2PosMultiplyer,
 			Integer grid2PosBias, Integer height, Integer width, Color color) {
