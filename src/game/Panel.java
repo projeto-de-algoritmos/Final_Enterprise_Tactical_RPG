@@ -391,21 +391,20 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 				for (SimpleEnemy enemy : simpleEnemies) {
 					enemy.setMoves(enemyMoves);
 				}
-
+				List<Player> toRemove = new ArrayList<Player>();
 				for (Player player : playerArmy) {
 					for (Entity enemy : allEnemies) {
 						if (enemy.getGridX().equals(player.getGridX()) && enemy.getGridY().equals(player.getGridY())) {
-							soundPlayer.play("death");
-
-							if (playerArmy.size() == 1) {
-								stop();
-							} else {
-								synchronized (this) {
-									playerArmy.remove(player);
-								}
-							}
+							soundPlayer.play("death");			
+							toRemove.add(player);
 						}
 					}
+				}
+				for (Player player : toRemove) {
+					playerArmy.remove(player);
+				}
+				if (playerArmy.size() == 0) {
+					stop();
 				}
 
 			} else {
