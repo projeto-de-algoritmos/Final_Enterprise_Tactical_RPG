@@ -17,7 +17,8 @@ import java.util.function.BinaryOperator;
 
 import javax.swing.JPanel;
 
-import game.entities.Enemy;
+import game.entities.SimpleEnemy;
+import game.entities.SimpleEnemyArmy;
 import game.entities.Entity;
 import game.entities.GreedyEnemy;
 import game.entities.MedianEnemy;
@@ -29,118 +30,7 @@ import graphs.CheapestPath;
 import graphs.GraphMatrix;
 import graphs.Position;
 
-public class Panel extends JPanel implements MouseListener, MouseMotionListener {
-	private class EnemyCheapestPath {
-		private final Enemy enemy;
-		private final CheapestPath<Position, Integer> path;
-		private final Boolean valid;
-
-		private EnemyCheapestPath(Enemy enemy, Entity player) {
-			this.enemy = enemy;
-			this.path = grid.dijkstra(new Position(enemy.getGridX(), enemy.getGridY()),
-					new Position(player.getGridX(), player.getGridY()));
-			this.valid = this.path == null ? false : true;
-		}
-
-		/**
-		 * @return the Enemy
-		 */
-		Enemy getEnemy() {
-			return enemy;
-		}
-
-		/**
-		 * @return the path
-		 */
-		CheapestPath<Position, Integer> getPath() {
-			return path;
-		}
-
-		/**
-		 * @return the valid
-		 */
-		Boolean getValid() {
-			return valid;
-		}
-	}
-
-	private class CompareEnemyCheapestPathCost implements Comparator<EnemyCheapestPath> {
-		@Override
-		public int compare(EnemyCheapestPath o1, EnemyCheapestPath o2) {
-			if (o1.getPath().getTotalCost() < o2.getPath().getTotalCost()) {
-				return -1;
-			}
-
-			if (o1.getPath().getTotalCost() > o2.getPath().getTotalCost()) {
-				return 1;
-			}
-
-			return 0;
-		}
-	}
-
-	private class GreedyCheapestPath extends EnemyCheapestPath implements Comparable<GreedyCheapestPath> {
-		private final GreedyEnemy greedyEnemy;
-		private final CheapestPath<Position, Integer> path;
-		private final Integer weight;
-		private final Integer value;
-		private final Double specificValue;
-		private final Boolean valid;
-
-		GreedyCheapestPath(GreedyEnemy greedyEnemy, Player player) {
-			super(greedyEnemy, player);
-			this.greedyEnemy = greedyEnemy;
-			this.path = grid.dijkstra(new Position(greedyEnemy.getGridX(), greedyEnemy.getGridY()),
-					new Position(player.getGridX(), player.getGridY()));
-			this.weight = this.path == null ? null : path.getPath().size();
-			this.value = this.path == null ? null : path.getTotalCost();
-			this.specificValue = this.path == null ? null : (double) value / (double) weight;
-			this.valid = this.path == null ? false : true;
-		}
-
-		/**
-		 * @return the greedyEnemy
-		 */
-		GreedyEnemy getGreedyEnemy() {
-			return greedyEnemy;
-		}
-
-		/**
-		 * @return the path
-		 */
-		@Override
-		CheapestPath<Position, Integer> getPath() {
-			return path;
-		}
-
-		/**
-		 * @return the weight
-		 */
-		Integer getWeight() {
-			return weight;
-		}
-
-		/**
-		 * @return the specificValue
-		 */
-		Double getSpecificValue() {
-			return specificValue;
-		}
-
-		/**
-		 * @return the valid
-		 */
-		@Override
-		Boolean getValid() {
-			return valid;
-		}
-
-		@Override
-		public int compareTo(GreedyCheapestPath o) {
-			return Double.compare(this.getSpecificValue(), o.getSpecificValue());
-		}
-	}
-	
+public class Panel extends JPanel implements MouseListener, MouseMotionListener {	
 	private class CompareWISCheapestPathEnd implements Comparator<WISCheapestPath> {
 		@Override
 		public int compare(WISCheapestPath o1, WISCheapestPath o2) {
@@ -178,18 +68,19 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	private final int minimumCost = 0;
 	private final int maximumCost = Integer.MAX_VALUE;
 
-	private List<Enemy> enemies = new ArrayList<Enemy>();
+	private List<SimpleEnemy> simpleEnemies = new ArrayList<SimpleEnemy>();
 	private List<GreedyEnemy> greedyEnemies = new ArrayList<GreedyEnemy>();
 	private List<MedianEnemy> medianEnemies = new ArrayList<MedianEnemy>();
 	private List<WISEnemy> wisEnemies = new ArrayList<WISEnemy>();
 	private List<Entity> allEnemies = new ArrayList<Entity>();
 	
 	private WISEnemyArmy wisEnemyArmy = new WISEnemyArmy();
+	private SimpleEnemyArmy simpleEnemyArmy = new SimpleEnemyArmy();
 
 	private int sizeX;
 	private int sizeY;
 	final private int playerMoves = 5;
-	final private int safeOffset = 2;
+	final private int safeOffset = 6;
 	final private Comparator<Integer> costComparator = new Comparator<Integer>() {
 		@Override
 		public int compare(Integer o1, Integer o2) {
@@ -303,9 +194,9 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 			Position p = generateRandomPos(minX, minY, maxX, maxY);
 			int x = p.getPosX();
 			int y = p.getPosY();
-			Enemy e = new Enemy(enemyMoves, x, y, tileSize, off, h, w, Color.RED);
-			enemies.add(e);
-			allEnemies.add(e);
+			SimpleEnemy e = new SimpleEnemy(enemyMoves, x, y, tileSize, off, h, w, Color.RED);
+			simpleEnemies.add(e);
+			allEnemies.add(e);			
 		}
 		// Inicializar inimigos ambiciosos
 		h = (int) (tileSize * 0.95); // 95% do tileSize
@@ -342,6 +233,9 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		}
 		wisEnemyArmy.setEnemies(wisEnemies);
 		wisEnemyArmy.setAllEnemies(allEnemies);
+		
+		simpleEnemyArmy.setEnemies(simpleEnemies);
+		simpleEnemyArmy.setAllEnemies(allEnemies);
 	}
 	
 	// Gera uma posição válida
@@ -482,7 +376,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 				rounds++;
 				if (rounds % 10 == 0 && enemyMoves <= 2 * playerMoves)
 					enemyMoves++;
-				for (Enemy enemy : enemies) {
+				for (SimpleEnemy enemy : simpleEnemies) {
 					enemy.setMoves(enemyMoves);
 				}
 				for(Player player : playerArmy)
@@ -648,27 +542,21 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 
 	private void encontraCaminhoInimigosComuns() {
 		grid.setVisitedToEmpty();
-
-		for (Enemy enemy : enemies) {
-			// Impedir inimigos de entrarem uns nos outros
-			lockOtherEnemies(enemy);
-
-			// Caminho do inimigo
-			EnemyCheapestPath enemyPath = new EnemyCheapestPath(enemy, playerArmy.get(0));
-			if (enemyPath.getValid()) {
-				moveEnemyToPlayerWithCost(enemyPath.getEnemy(), enemyPath.getPath());
-			}
-
-			// Reverter mudança
-			unlockAllEnemies();
-
-			grid.setVisitedToEmpty();
-
+		
+		simpleEnemyArmy.setGrid(grid);
+		simpleEnemyArmy.setTarget(playerArmy.get(actualPlayer));
+		simpleEnemyArmy.findPath();
+		
+		for (EnemyCheapestPath path : simpleEnemyArmy.getOrderedPaths()) {
+			moveEnemyToPlayerWithCost(path.getEnemy(), path.getPath());
+			
 			// Atualiza a tela para mostrar o movimento individual de cada inimigo
 			if (stepMode) {
 				delayPaint(msDelay);
 			}
 		}
+		
+		grid.setVisitedToEmpty();
 	}
 
 	private void delayPaint(int delay) {
@@ -706,7 +594,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 			// Impedir inimigos de entrarem uns nos outros
 			lockOtherEnemies(enemy);
 
-			GreedyCheapestPath item = new GreedyCheapestPath(enemy, playerArmy.get(actualPlayer));
+			GreedyCheapestPath item = new GreedyCheapestPath(enemy, playerArmy.get(actualPlayer), grid);
 
 			if (item.getValid()) {
 				items.add(item);
@@ -782,7 +670,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 			// Impedir inimigos de entrarem uns nos outros
 			lockOtherEnemies(enemy);
 
-			EnemyCheapestPath enemyPath = new EnemyCheapestPath(enemy, playerArmy.get(actualPlayer));
+			EnemyCheapestPath enemyPath = new EnemyCheapestPath(enemy, playerArmy.get(actualPlayer), grid);
 
 			if (enemyPath.getValid()) {
 				items.add(enemyPath);
@@ -804,7 +692,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		grid.setVisitedToEmpty();
 	}
 	
-	void encontraCaminhoInimigosWIS() {
+	private void encontraCaminhoInimigosWIS() {
 		grid.setVisitedToEmpty();
 		
 		wisEnemyArmy.setGrid(grid);
@@ -822,7 +710,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	 * @param enemy {@summary Marca outros inimigos como casas proibidas, evitando
 	 *              que dois inimigos fiquem, ao mesmo tempo, em uma casa só}
 	 */
-	public void lockOtherEnemies(Enemy enemy) {
+	public void lockOtherEnemies(SimpleEnemy enemy) {
 		for (Entity otherEnemy : allEnemies) {
 			grid.setElementValue(otherEnemy.getGridX(), otherEnemy.getGridY(), VISITED);
 		}
@@ -831,7 +719,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 
 	/**
 	 * Libera a trava que impede os inimigos de estarem juntos em uma mesma casa.
-	 * Sempre execute essa função após executar {@link #lockOtherEnemies(Enemy)}
+	 * Sempre execute essa função após executar {@link #lockOtherEnemies(SimpleEnemy)}
 	 */
 	public void unlockAllEnemies() {
 		for (Entity enemy : allEnemies) {
@@ -844,7 +732,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	 * @param path  {@summary Move inimigo até o jogador respeitando o custo máximo
 	 *              permitido pelo inimigo.}
 	 */
-	private void moveEnemyToPlayerWithCost(Enemy enemy, CheapestPath<Position, Integer> path) {
+	private void moveEnemyToPlayerWithCost(SimpleEnemy enemy, CheapestPath<Position, Integer> path) {
 		Integer actualCost = 0;
 		Position endPosition = new Position(enemy.getGridX(), enemy.getGridY());
 		Integer initialTileCost = grid.getElementCost(endPosition);
