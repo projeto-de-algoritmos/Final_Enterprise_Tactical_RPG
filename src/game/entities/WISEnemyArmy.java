@@ -19,11 +19,13 @@ public class WISEnemyArmy extends EnemyArmy<WISEnemy, WISCheapestPath> {
 			// Impedir inimigos de entrarem uns nos outros
 			lockOtherEnemies(enemy);
 
-			WISCheapestPath enemyPath = new WISCheapestPath(enemy, getTargets().get(0),
-					paths.isEmpty() ? 0 : paths.get(paths.size() - 1).getEnd() + 1, getGrid());
+			for (Entity target : getTargets()) {
+				WISCheapestPath enemyPath = new WISCheapestPath(enemy, target,
+						paths.isEmpty() ? 0 : paths.get(paths.size() - 1).getEnd() + 1, getGrid());
 
-			if (enemyPath.getValid()) {
-				paths.add(enemyPath);
+				if (enemyPath.getValid()) {
+					paths.add(enemyPath);
+				}
 			}
 
 			// Reverter mudança

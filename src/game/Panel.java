@@ -364,10 +364,10 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	@Override
 	public void mouseClicked(MouseEvent m) {
 		stopOnTKO();
-		
-		// Move o Jogador Atual		
-		if (moveCost <= playerArmy.get(actualPlayer).getMoves() && !inPlayer && !isForbidden(m) && 
-				checkValidPos(m.getX(), m.getY())) {
+
+		// Move o Jogador Atual
+		if (moveCost <= playerArmy.get(actualPlayer).getMoves() && !inPlayer && !isForbidden(m)
+				&& checkValidPos(m.getX(), m.getY())) {
 			if (stepMode) {
 				// Movimentação passo a passo
 				previewVisibility = false;
@@ -380,7 +380,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 			}
 			inPlayer = true;
 			actualPlayer++;
-			
+
 			if (actualPlayer == playerArmy.size()) {
 				actualPlayer = 0;
 				encontraCaminhoInimigos();
@@ -390,20 +390,21 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 				for (SimpleEnemy enemy : simpleEnemies) {
 					enemy.setMoves(enemyMoves);
 				}
-				for(Player player : playerArmy)
+				for (Player player : playerArmy)
 					for (Entity enemy : allEnemies) {
-						if (enemy.getGridX().equals(player.getGridX()) &&
-								enemy.getGridY().equals(player.getGridY())) {
+						if (enemy.getGridX().equals(player.getGridX()) && enemy.getGridY().equals(player.getGridY())) {
 							soundPlayer.play("death");
-							
-							if(playerArmy.size() == 1)
+
+							if (playerArmy.size() == 1) {
 								stop();
-							else
-								playerArmy.remove(player);
+							} else {
+								synchronized (this) {
+									playerArmy.remove(player);
+								}
+							}
 						}
 					}
-			}
-			else
+			} else
 				previewVisibility = true;
 			repaint();
 		}
@@ -550,12 +551,22 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		
 		updateMessage("Your Turn");
 	}
+	
+	private List<Entity> playerArmyToEntity() {
+		List<Entity> convertedArmy = new ArrayList<Entity>();
+		
+		for (Entity e : playerArmy) {
+			convertedArmy.add(e);
+		}
+		
+		return convertedArmy;
+	}
 
 	private void encontraCaminhoInimigosComuns() {
 		grid.setVisitedToEmpty();
 		
 		simpleEnemyArmy.setGrid(grid);
-		simpleEnemyArmy.setTarget(playerArmy.get(actualPlayer));
+		simpleEnemyArmy.setTargets(playerArmyToEntity());
 		simpleEnemyArmy.findPath();
 		
 		for (EnemyCheapestPath path : simpleEnemyArmy.getOrderedPaths()) {

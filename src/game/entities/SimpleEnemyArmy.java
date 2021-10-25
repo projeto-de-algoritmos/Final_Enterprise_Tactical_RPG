@@ -1,8 +1,10 @@
 package game.entities;
 
 import java.util.ArrayList;
+
 import java.util.List;
 
+import game.CompareEnemyCheapestPathCost;
 import game.EnemyCheapestPath;
 
 public class SimpleEnemyArmy extends EnemyArmy<SimpleEnemy, EnemyCheapestPath> {
@@ -17,9 +19,11 @@ public class SimpleEnemyArmy extends EnemyArmy<SimpleEnemy, EnemyCheapestPath> {
 			lockOtherEnemies(enemy);
 
 			// Caminho do inimigo
-			EnemyCheapestPath enemyPath = new EnemyCheapestPath(enemy, getTargets().get(0), getGrid());
-			if (enemyPath.getValid()) {
-				paths.add(enemyPath);
+			for (Entity target : getTargets()) {
+				EnemyCheapestPath enemyPath = new EnemyCheapestPath(enemy, target, getGrid());
+				if (enemyPath.getValid()) {
+					paths.add(enemyPath);
+				}
 			}
 
 			// Reverter mudança
@@ -29,7 +33,7 @@ public class SimpleEnemyArmy extends EnemyArmy<SimpleEnemy, EnemyCheapestPath> {
 		}
 
 		if (!paths.isEmpty()) {
-			setOrderedPaths(paths);
+			filterPathsByEnemies(paths, new CompareEnemyCheapestPathCost());
 		} else {
 			getOrderedPaths().clear();
 		}

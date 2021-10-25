@@ -1,7 +1,10 @@
 package game.entities;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import game.EnemyCheapestPath;
 import graphs.GraphMatrix;
@@ -33,12 +36,42 @@ public abstract class EnemyArmy<EnemyT extends SimpleEnemy, PathT extends EnemyC
 
 	/**
 	 * Libera a trava que impede os inimigos de estarem juntos em uma mesma casa.
-	 * Sempre execute essa função após executar {@link #lockOtherEnemies(SimpleEnemy)}
+	 * Sempre execute essa função após executar
+	 * {@link #lockOtherEnemies(SimpleEnemy)}
 	 */
 	protected void unlockAllEnemies() {
 		for (Entity enemy : getAllEnemies()) {
 			getGrid().setElementValue(enemy.getGridX(), enemy.getGridY(), getGrid().getEMPTY());
 		}
+	}
+
+	/**
+	 * @param paths
+	 * @param comparator
+	 */
+	protected void filterPathsByEnemies(List<PathT> paths, Comparator<PathT> comparator) {
+		Map<EnemyT, List<PathT>> map = new HashMap<EnemyT, List<PathT>>();
+		List<PathT> filteredPaths = new ArrayList<PathT>();
+
+		for (EnemyT e : getEnemies()) {
+			map.put(e, new ArrayList<PathT>());
+		}
+
+		for (PathT p : paths) {
+			List<PathT> enemyPath = map.get(p.getEnemy());
+
+			if (enemyPath != null) {
+				enemyPath.add(p);
+				enemyPath.sort(comparator);
+			}
+		}
+
+		for (SimpleEnemy mapEnemies : map.keySet()) {
+			filteredPaths.add(map.get(mapEnemies).get(0));
+		}
+
+		setOrderedPaths(filteredPaths);
+
 	}
 
 	abstract public void findPath();
@@ -84,7 +117,7 @@ public abstract class EnemyArmy<EnemyT extends SimpleEnemy, PathT extends EnemyC
 	public void setTargets(List<Entity> targets) {
 		this.targets = targets;
 	}
-	
+
 	/**
 	 * @param target the target to set
 	 */
@@ -120,5 +153,4 @@ public abstract class EnemyArmy<EnemyT extends SimpleEnemy, PathT extends EnemyC
 	public void setAllEnemies(List<Entity> allEnemies) {
 		this.allEnemies = allEnemies;
 	}
-
 }

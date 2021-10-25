@@ -19,7 +19,7 @@ public class GreedyEnemyArmy extends EnemyArmy<GreedyEnemy, GreedyCheapestPath> 
 	@Override
 	public void findPath() {
 		Integer maxWeight = getGreedyArmyMoveBudget();
-		
+
 		// used moves
 		Integer currWeight = 0;
 
@@ -30,10 +30,12 @@ public class GreedyEnemyArmy extends EnemyArmy<GreedyEnemy, GreedyCheapestPath> 
 			// Impedir inimigos de entrarem uns nos outros
 			lockOtherEnemies(enemy);
 
-			GreedyCheapestPath item = new GreedyCheapestPath(enemy, getTargets().get(0), getGrid());
+			for (Entity target : getTargets()) {
+				GreedyCheapestPath item = new GreedyCheapestPath(enemy, target, getGrid());
 
-			if (item.getValid()) {
-				items.add(item);
+				if (item.getValid()) {
+					items.add(item);
+				}
 			}
 
 			// Reverter mudança
@@ -54,9 +56,9 @@ public class GreedyEnemyArmy extends EnemyArmy<GreedyEnemy, GreedyCheapestPath> 
 			} else {
 				Integer remainder = maxWeight - currWeight;
 				lastPos = item.getPath().getPath().size() > remainder ? remainder : item.getPath().getPath().size();
-				
+
 				Integer size = item.getPath().getPath().size() - 1;
-				
+
 				// aparar posições extras
 				for (int i = size; i > lastPos; i--) {
 					item.getPath().getPath().remove(i);

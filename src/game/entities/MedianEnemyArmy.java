@@ -23,10 +23,12 @@ public class MedianEnemyArmy extends EnemyArmy<MedianEnemy, EnemyCheapestPath> {
 			// Impedir inimigos de entrarem uns nos outros
 			lockOtherEnemies(enemy);
 
-			EnemyCheapestPath enemyPath = new EnemyCheapestPath(enemy, getTargets().get(0), getGrid());
+			for (Entity target : getTargets()) {
+				EnemyCheapestPath enemyPath = new EnemyCheapestPath(enemy, target, getGrid());
 
-			if (enemyPath.getValid()) {
-				items.add(enemyPath);
+				if (enemyPath.getValid()) {
+					items.add(enemyPath);
+				}
 			}
 
 			// Reverter mudança
