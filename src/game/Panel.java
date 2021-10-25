@@ -334,31 +334,33 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 
 	@Override
 	public void mouseMoved(MouseEvent m) {
-		stopOnTKO();
-		if(checkValidPos(m.getX(), m.getY())) {
-			// Coordenadas atuais do mouse na grade
-			int mx = coordToGrid(m.getX());
-			int my = coordToGrid(m.getY());
-	
-			// Atualiza as coordenadas do Mouse
-			if (lastMouseX != mx || lastMouseY != my) {
-				lastMouseX = mx;
-				lastMouseY = my;
-				if (verifyCollision(mx,my))
-					inPlayer = true;
-				else {
-					inPlayer = false;
-					try {
-						encontraCaminho();
-					} catch (ArrayIndexOutOfBoundsException e) {
-	
+		if(message == "Your Turn" && playerArmy.size() > 0) {
+				stopOnTKO();
+			if(checkValidPos(m.getX(), m.getY())) {
+				// Coordenadas atuais do mouse na grade
+				int mx = coordToGrid(m.getX());
+				int my = coordToGrid(m.getY());
+		
+				// Atualiza as coordenadas do Mouse
+				if (lastMouseX != mx || lastMouseY != my) {
+					lastMouseX = mx;
+					lastMouseY = my;
+					if (verifyCollision(mx,my))
+						inPlayer = true;
+					else {
+						inPlayer = false;
+						try {
+							encontraCaminho();
+						} catch (ArrayIndexOutOfBoundsException e) {
+		
+						}
 					}
+					repaint();
 				}
-				repaint();
 			}
+			else
+				mouseExited(m);
 		}
-		else
-			mouseExited(m);
 	}
 
 	@Override
@@ -400,13 +402,15 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 						}
 					}
 				}
-				for (Player player : toRemove) {
-					playerArmy.remove(player);
+				synchronized(this){
+					for (Player player : toRemove) {
+						playerArmy.remove(player);
+					}
+					
+					if (playerArmy.size() == 0) {
+						stop();
+					}
 				}
-				if (playerArmy.size() == 0) {
-					stop();
-				}
-
 			} else {
 				previewVisibility = true;
 			}
@@ -436,11 +440,13 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 
 	@Override
 	public void mouseExited(MouseEvent m) {
-		stopOnTKO();
-		inPlayer = true;
-		lastMouseX = playerArmy.get(actualPlayer).getGridX();
-		lastMouseY = playerArmy.get(actualPlayer).getGridY();
-		repaint();
+		if(message == "Your Turn" && playerArmy.size() > 0) {
+			stopOnTKO();
+			inPlayer = true;
+			lastMouseX = playerArmy.get(actualPlayer).getGridX();
+			lastMouseY = playerArmy.get(actualPlayer).getGridY();
+			repaint();
+		}
 	}
 
 	@Override
