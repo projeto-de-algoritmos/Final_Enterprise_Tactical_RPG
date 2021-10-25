@@ -385,12 +385,14 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 				actualPlayer = 0;
 				encontraCaminhoInimigos();
 				rounds++;
-				if (rounds % 10 == 0 && enemyMoves <= 2 * playerMoves)
+				if (rounds % 10 == 0 && enemyMoves <= 2 * playerMoves) {
 					enemyMoves++;
+				}
 				for (SimpleEnemy enemy : simpleEnemies) {
 					enemy.setMoves(enemyMoves);
 				}
-				for (Player player : playerArmy)
+
+				for (Player player : playerArmy) {
 					for (Entity enemy : allEnemies) {
 						if (enemy.getGridX().equals(player.getGridX()) && enemy.getGridY().equals(player.getGridY())) {
 							soundPlayer.play("death");
@@ -404,8 +406,11 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 							}
 						}
 					}
-			} else
+				}
+
+			} else {
 				previewVisibility = true;
+			}
 			repaint();
 		}
 	}
@@ -601,7 +606,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		
 		greedyEnemyArmy.setGreedyArmyMoveBudget(greedyArmyMoveBudget);
 		greedyEnemyArmy.setGrid(grid);
-		greedyEnemyArmy.setTarget(playerArmy.get(actualPlayer));
+		greedyEnemyArmy.setTargets(playerArmyToEntity());
 		greedyEnemyArmy.findPath();
 		
 		for (GreedyCheapestPath path : greedyEnemyArmy.getOrderedPaths()) {		

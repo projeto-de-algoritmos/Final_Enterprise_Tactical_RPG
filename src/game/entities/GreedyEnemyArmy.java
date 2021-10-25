@@ -3,6 +3,7 @@ package game.entities;
 import java.util.ArrayList;
 import java.util.List;
 
+import game.CompareGreedyCheapestPathCost;
 import game.GreedyCheapestPath;
 
 public class GreedyEnemyArmy extends EnemyArmy<GreedyEnemy, GreedyCheapestPath> {
@@ -71,7 +72,7 @@ public class GreedyEnemyArmy extends EnemyArmy<GreedyEnemy, GreedyCheapestPath> 
 		}
 
 		if (!paths.isEmpty()) {
-			setOrderedPaths(paths);
+			filterPathsByEnemies(paths, new CompareGreedyCheapestPathCost());
 		} else {
 			getOrderedPaths().clear();
 		}

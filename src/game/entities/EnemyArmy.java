@@ -67,7 +67,11 @@ public abstract class EnemyArmy<EnemyT extends SimpleEnemy, PathT extends EnemyC
 		}
 
 		for (SimpleEnemy mapEnemies : map.keySet()) {
-			filteredPaths.add(map.get(mapEnemies).get(0));
+			List<PathT> enemyPath = map.get(mapEnemies);
+
+			if (!enemyPath.isEmpty()) {
+				filteredPaths.add(enemyPath.get(0));
+			}
 		}
 
 		setOrderedPaths(filteredPaths);
