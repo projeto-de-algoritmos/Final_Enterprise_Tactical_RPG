@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BinaryOperator;
@@ -54,7 +55,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 	private static final Integer VISITED = 1;
 	private static int WIDTH;
 	private static int HEIGHT;
-	private List<Player> playerArmy = new ArrayList<Player>();
+	private List<Player> playerArmy = new CopyOnWriteArrayList<Player>();
 	private int actualPlayer = 0;
 	private Map map;
 	private List<Position> preview;
@@ -393,22 +394,18 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 				for (SimpleEnemy enemy : simpleEnemies) {
 					enemy.setMoves(enemyMoves);
 				}
-				List<Player> toRemove = new ArrayList<Player>();
+
 				for (Player player : playerArmy) {
 					for (Entity enemy : allEnemies) {
 						if (enemy.getGridX().equals(player.getGridX()) && enemy.getGridY().equals(player.getGridY())) {
-							soundPlayer.play("death");			
-							toRemove.add(player);
+							soundPlayer.play("death");
+
+							if (playerArmy.size() == 1) {
+								stop();
+							} else {
+								playerArmy.remove(player);
+							}
 						}
-					}
-				}
-				synchronized(this){
-					for (Player player : toRemove) {
-						playerArmy.remove(player);
-					}
-					
-					if (playerArmy.size() == 0) {
-						stop();
 					}
 				}
 			} else {
