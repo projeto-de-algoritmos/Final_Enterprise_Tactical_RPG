@@ -43,7 +43,7 @@ public class MedianEnemyArmy extends EnemyArmy<MedianEnemy, EnemyCheapestPath> {
 
 			paths.add(choosen);
 
-			setOrderedPaths(paths);
+			filterPathsByEnemies(paths, new CompareEnemyCheapestPathCost());
 		}
 
 	}

@@ -640,7 +640,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		grid.setVisitedToEmpty();
 
 		medianEnemyArmy.setGrid(grid);
-		medianEnemyArmy.setTarget(playerArmy.get(actualPlayer));
+		medianEnemyArmy.setTargets(playerArmyToEntity());
 		medianEnemyArmy.findPath();
 
 		for (EnemyCheapestPath path : medianEnemyArmy.getOrderedPaths()) {
