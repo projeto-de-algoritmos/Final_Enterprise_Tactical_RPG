@@ -28,8 +28,6 @@ public class SimpleEnemyArmy extends EnemyArmy<SimpleEnemy, EnemyCheapestPath> {
 
 			// Reverter mudança
 			unlockAllEnemies();
-
-			getGrid().setVisitedToEmpty();
 		}
 
 		if (!paths.isEmpty()) {

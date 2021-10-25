@@ -3,6 +3,7 @@ package game.entities;
 import java.util.ArrayList;
 import java.util.List;
 
+import game.CompareWISCheapestPathCost;
 import game.WISCheapestPath;
 import game.extra_algorithms.WeightedIntervalScheduling;
 
@@ -36,7 +37,8 @@ public class WISEnemyArmy extends EnemyArmy<WISEnemy, WISCheapestPath> {
 			WeightedIntervalScheduling<WISCheapestPath, Integer, Integer> wis = new WeightedIntervalScheduling<WISCheapestPath, Integer, Integer>(
 					paths, 0);
 			wis.compute();
-			setOrderedPaths(wis.getOrderedTasks());
+
+			filterPathsByEnemies(wis.getOrderedTasks(), new CompareWISCheapestPathCost());
 		} else {
 			getOrderedPaths().clear();
 		}
