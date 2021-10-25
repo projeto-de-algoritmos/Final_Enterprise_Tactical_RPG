@@ -327,6 +327,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 		// Desenha mensagens
 		g2d.setColor(Color.BLACK);
 		g2d.drawString(message, gridToCoord(1), gridToCoord(sizeY)+tileSize/2+5);
+		g2d.drawString("Rounds Survived: " + String.valueOf(rounds), gridToCoord(sizeX/2), gridToCoord(sizeY)+tileSize/2+5);
 	}
 
 	public void stop() {
@@ -382,6 +383,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 				soundPlayer.play("playerMove");
 			}
 			inPlayer = true;
+			playerArmy.get(actualPlayer).changeState();
 			actualPlayer++;
 
 			if (actualPlayer == playerArmy.size()) {
@@ -396,6 +398,7 @@ public class Panel extends JPanel implements MouseListener, MouseMotionListener 
 				}
 
 				for (Player player : playerArmy) {
+					player.changeState();
 					for (Entity enemy : allEnemies) {
 						if (enemy.getGridX().equals(player.getGridX()) && enemy.getGridY().equals(player.getGridY())) {
 							soundPlayer.play("death");
