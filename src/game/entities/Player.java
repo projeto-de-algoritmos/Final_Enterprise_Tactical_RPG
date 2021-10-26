@@ -10,7 +10,7 @@ public class Player extends Entity {
 			Integer grid2PosBias, Integer height, Integer width, Color color) {
 		super(moves, initialGridX, initialGridY, grid2PosMultiplyer, grid2PosBias, height, width, color);
 	}
-	
+
 	public void changeState() {
 		moved = moved ? false : true;
 		if (moved) {
@@ -18,6 +18,6 @@ public class Player extends Entity {
 		} else {
 			this.setColor(this.getColor().brighter().brighter());
 		}
-		
+
 	}
 }

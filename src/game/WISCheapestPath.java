@@ -30,7 +30,7 @@ public class WISCheapestPath extends EnemyCheapestPath
 		this.grid = grid;
 		this.path = this.grid.dijkstra(new Position(wisEnemy.getGridX(), wisEnemy.getGridY()),
 				new Position(player.getGridX(), player.getGridY()));
-		
+
 		if (this.path == null) {
 			this.weight = null;
 			this.cost = null;

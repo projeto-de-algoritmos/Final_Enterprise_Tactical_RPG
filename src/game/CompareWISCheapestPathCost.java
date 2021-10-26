@@ -13,10 +13,8 @@ public class CompareWISCheapestPathCost implements Comparator<WISCheapestPath> {
 		if (o1.getPath().getTotalCost() > o2.getPath().getTotalCost()) {
 			return 1;
 		}
-		
+
 		return 0;
 	}
-
-
 
 }

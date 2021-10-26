@@ -99,7 +99,7 @@ class TestWeightedIntervalSchedulingInteger {
 			builder.append(", weight=");
 			builder.append(weight);
 			builder.append(", desc=");
-			builder.append(desc);
+			builder.append(getDesc());
 			builder.append("]");
 			return builder.toString();
 		}
@@ -168,9 +168,9 @@ class TestWeightedIntervalSchedulingInteger {
 		resultOptimalWeight = wis.getOptimalWeight();
 		System.out.println("resultOptimalWeight");
 		System.out.println(resultOptimalWeight);
-		
+
 		expectedOptimalWeight = 250;
-		
+
 		assertEquals(expectedOptimalWeight, resultOptimalWeight);
 	}
 

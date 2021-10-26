@@ -15,22 +15,21 @@ public class Game {
 
 	public Game(int size, boolean stepMode, boolean sounds) {
 		this.setRunning(true);
-		
+
 		int mod = 500 % size;
-		
+
 		frame = new JFrame();
-		
+
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setTitle("Enterprise Tactical RPG");
 		frame.pack();
-		
-		
-		frame.setSize(500 - mod, 530 - mod + 530/size);
+
+		frame.setSize(500 - mod, 530 - mod + 530 / size);
 		frame.setLocationRelativeTo(null);
-		
-		gamePanel = new Panel(size, 500-mod, 500-mod, stepMode, sounds);
+
+		gamePanel = new Panel(size, 500 - mod, 500 - mod, stepMode, sounds);
 		frame.add(gamePanel, BorderLayout.CENTER);
-		
+
 		frame.setVisible(true);
 		frame.setResizable(false);
 

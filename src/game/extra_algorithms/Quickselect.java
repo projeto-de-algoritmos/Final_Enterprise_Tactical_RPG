@@ -20,9 +20,8 @@ public class Quickselect<ItemT> {
 	}
 
 	/*
-	 * Considera o pivô inicialmente no final do vetor
-	 * Particiona de modo a que os elementos menores do vetor fiquem à
-	 * esquerda do pivô, e os maiores, à direita
+	 * Considera o pivô inicialmente no final do vetor Particiona de modo a que os
+	 * elementos menores do vetor fiquem à esquerda do pivô, e os maiores, à direita
 	 */
 	private Integer partition(List<ItemT> v, Integer l, Integer r) {
 		// Pivô inicia no final do vetor

@@ -13,8 +13,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
-
 import java.awt.event.ItemEvent;
+
 public class Menu {
 	private JFrame frame;
 	private boolean started = false;
@@ -30,11 +30,11 @@ public class Menu {
 	public int getSize() {
 		return size;
 	}
-	
+
 	public boolean isSounds() {
 		return sounds;
 	}
-	
+
 	public boolean isStepMode() {
 		return stepMode;
 	}
@@ -53,45 +53,45 @@ public class Menu {
 		JPanel panel = new JPanel();
 		frame.getContentPane().add(panel, BorderLayout.CENTER);
 		panel.setLayout(new GridLayout(0, 1, 0, 0));
-		
+
 		JButton startButton = new JButton("Start");
 		startButton.setActionCommand("Start");
 		startButton.addActionListener(new ButtonEvent());
 		panel.add(startButton);
-		
+
 		JPanel gridPanel = new JPanel();
 		panel.add(gridPanel);
 		gridPanel.setLayout(new BorderLayout(0, 0));
-		
+
 		JButton lowerButton = new JButton("-");
 		lowerButton.setActionCommand("lowerGridSize");
 		lowerButton.addActionListener(new ButtonEvent());
 		gridPanel.add(lowerButton, BorderLayout.WEST);
-		
+
 		JButton raiseButton = new JButton("+");
 		raiseButton.setActionCommand("raiseGridSize");
 		raiseButton.addActionListener(new ButtonEvent());
 		gridPanel.add(raiseButton, BorderLayout.EAST);
-		
+
 		label = new JLabel("Grid Size: 20");
 		gridPanel.add(label);
 		label.setHorizontalAlignment(SwingConstants.CENTER);
-		
+
 		JCheckBox chckbxSounds = new JCheckBox("Sounds", true);
-		chckbxSounds.addItemListener(new ItemListener() {    
-            public void itemStateChanged(ItemEvent e) {                      
-            	sounds = e.getStateChange()== 1 ? true: false; 
-            }    
-         });    
+		chckbxSounds.addItemListener(new ItemListener() {
+			public void itemStateChanged(ItemEvent e) {
+				sounds = e.getStateChange() == 1 ? true : false;
+			}
+		});
 		panel.add(chckbxSounds);
 		chckbxSounds.setHorizontalAlignment(SwingConstants.CENTER);
-		
+
 		JCheckBox chckbxStepmode = new JCheckBox("StepMode", true);
-		chckbxStepmode.addItemListener(new ItemListener() {    
-            public void itemStateChanged(ItemEvent e) {                      
-            	stepMode = e.getStateChange()== 1 ? true: false; 
-            }    
-         });    
+		chckbxStepmode.addItemListener(new ItemListener() {
+			public void itemStateChanged(ItemEvent e) {
+				stepMode = e.getStateChange() == 1 ? true : false;
+			}
+		});
 		panel.add(chckbxStepmode);
 		chckbxStepmode.setHorizontalAlignment(SwingConstants.CENTER);
 
